@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,16 +15,20 @@ import (
 )
 
 type App struct {
-	server          *apiserver.Server
-	logger          *slog.Logger
-	mu              sync.RWMutex
-	ctx             context.Context
-	databasePath    string
-	uninstallerPath string
+	server           *apiserver.Server
+	logger           *slog.Logger
+	mu               sync.RWMutex
+	ctx              context.Context
+	databasePath     string
+	uninstallerPath  string
+	startUninstaller func(string) error
 }
 
 func New(server *apiserver.Server, logger *slog.Logger, databasePath, uninstallerPath string) *App {
-	return &App{server: server, logger: logger, databasePath: databasePath, uninstallerPath: uninstallerPath}
+	return &App{
+		server: server, logger: logger, databasePath: databasePath,
+		uninstallerPath: uninstallerPath, startUninstaller: startElevatedUninstaller,
+	}
 }
 
 func DetectUninstaller() (string, bool) {
@@ -62,16 +65,14 @@ func (app *App) Uninstall() error {
 	app.mu.RLock()
 	ctx := app.ctx
 	uninstallerPath := app.uninstallerPath
+	startUninstaller := app.startUninstaller
 	app.mu.RUnlock()
 	if !isUninstallerAvailable(uninstallerPath) {
 		return fmt.Errorf("uninstaller is not available")
 	}
-	command := exec.Command(uninstallerPath)
-	command.Dir = filepath.Dir(uninstallerPath)
-	if err := command.Start(); err != nil {
+	if err := startUninstaller(uninstallerPath); err != nil {
 		return fmt.Errorf("start uninstaller: %w", err)
 	}
-	_ = command.Process.Release()
 	if ctx != nil {
 		go func() {
 			time.Sleep(300 * time.Millisecond)
