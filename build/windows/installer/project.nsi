@@ -77,6 +77,31 @@ Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
   !insertmacro wails.checkArchitecture
   SetRegView 64
+  !ifdef WAILS_INSTALL_SCOPE
+    !if "${WAILS_INSTALL_SCOPE}" == "user"
+      ReadRegStr $0 HKCU "${UNINST_KEY}" "InstallLocation"
+      ${If} $0 == ""
+        ReadRegStr $0 HKCU "${UNINST_KEY}" "DisplayIcon"
+      ${EndIf}
+    !else
+      ReadRegStr $0 HKLM "${UNINST_KEY}" "InstallLocation"
+      ${If} $0 == ""
+        ReadRegStr $0 HKLM "${UNINST_KEY}" "DisplayIcon"
+      ${EndIf}
+    !endif
+  !else
+    ReadRegStr $0 HKLM "${UNINST_KEY}" "InstallLocation"
+    ${If} $0 == ""
+      ReadRegStr $0 HKLM "${UNINST_KEY}" "DisplayIcon"
+    ${EndIf}
+  !endif
+  ${If} $0 != ""
+    ${IfThen} ${FileExists} "$0\${PRODUCT_EXECUTABLE}" ${|} StrCpy $INSTDIR "$0" ${|}
+    ${IfNot} ${FileExists} "$0\${PRODUCT_EXECUTABLE}"
+      ${GetParent} "$0" $0
+      ${IfThen} ${FileExists} "$0\${PRODUCT_EXECUTABLE}" ${|} StrCpy $INSTDIR "$0" ${|}
+    ${EndIf}
+  ${EndIf}
   StrCpy $DataDirectory "$APPDATA\OmniCred"
   StrCpy $ExistingDataConfig "0"
   IfFileExists "$APPDATA\OmniCred\config.json" 0 +2
@@ -162,6 +187,16 @@ Section
   !insertmacro wails.associateFiles
   !insertmacro wails.associateCustomProtocols
   !insertmacro wails.writeUninstaller
+  SetRegView 64
+  !ifdef WAILS_INSTALL_SCOPE
+    !if "${WAILS_INSTALL_SCOPE}" == "user"
+      WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+    !else
+      WriteRegStr HKLM "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+    !endif
+  !else
+    WriteRegStr HKLM "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+  !endif
 SectionEnd
 
 Section "uninstall"
