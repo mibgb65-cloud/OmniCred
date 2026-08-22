@@ -167,7 +167,7 @@ wails build -clean -nsis -o OmniCred.exe
 https://github.com/mibgb65-cloud/OmniCred
 ```
 
-推送符合 `vMAJOR.MINOR.PATCH` 的标签（例如 `v0.2.0`）后，[`.github/workflows/release.yml`](./.github/workflows/release.yml) 会在 Windows runner 上运行测试、构建 EXE 和双语安装器、生成 SHA-256 校验文件，并创建 GitHub Release。不要把本地数据库或真实密码提交到仓库。
+每次发布前，先创建与标签同名的说明文件，例如 [`docs/releases/v0.1.0.md`](./docs/releases/v0.1.0.md)。推送符合 `vMAJOR.MINOR.PATCH` 的标签（例如 `v0.2.0`）后，[`.github/workflows/release.yml`](./.github/workflows/release.yml) 会读取对应说明作为 Release Notes，并在 Windows runner 上运行测试、构建 EXE 和双语安装器、生成 SHA-256 校验文件以及创建 GitHub Release。缺少对应说明文件时发布会失败。不要把本地数据库或真实密码提交到仓库。
 
 ## 验证
 

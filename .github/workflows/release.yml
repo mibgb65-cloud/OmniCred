@@ -30,12 +30,15 @@ jobs:
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
           choco install nsis --yes --no-progress
+          "${env:ProgramFiles(x86)}\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Set release version
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag must use vMAJOR.MINOR.PATCH" }
+          $notesPath = "docs/releases/${{ github.ref_name }}.md"
+          if (-not (Test-Path -LiteralPath $notesPath)) { throw "Missing release notes: $notesPath" }
           $config = Get-Content -Raw wails.json | ConvertFrom-Json
           $config.info.productVersion = $version
           $config | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 wails.json
@@ -73,4 +76,4 @@ jobs:
           $assets = @("build/bin/OmniCred.exe")
           $assets += (Get-ChildItem "build/bin/*-installer.exe").FullName
           $assets += "build/bin/SHA256SUMS.txt"
-          gh release create $tag @assets --title "OmniCred $tag" --generate-notes --verify-tag
+          gh release create $tag @assets --title "OmniCred $tag" --notes-file "docs/releases/$tag.md" --verify-tag
