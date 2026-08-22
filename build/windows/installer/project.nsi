@@ -42,6 +42,8 @@ LangString DATA_PAGE_LABEL ${LANG_ENGLISH} "Data folder:"
 LangString DATA_PAGE_LABEL ${LANG_SIMPCHINESE} "数据文件夹："
 LangString DATA_PAGE_NOTE ${LANG_ENGLISH} "The database file omnicred.db will be created in this folder. Existing settings are never overwritten."
 LangString DATA_PAGE_NOTE ${LANG_SIMPCHINESE} "数据库文件 omnicred.db 将保存在此文件夹中。安装器不会覆盖已有设置。"
+LangString DATA_PAGE_EXISTING ${LANG_ENGLISH} "Existing data settings were found. This installation will keep the current location. You can migrate the database later from OmniCred Settings."
+LangString DATA_PAGE_EXISTING ${LANG_SIMPCHINESE} "检测到已有数据设置。本次安装将保留当前位置；安装完成后可在 OmniCred 设置页面迁移数据库。"
 LangString DATA_PAGE_BROWSE ${LANG_ENGLISH} "Browse..."
 LangString DATA_PAGE_BROWSE ${LANG_SIMPCHINESE} "浏览..."
 LangString DATA_PAGE_DIALOG ${LANG_ENGLISH} "Choose the OmniCred data folder"
@@ -54,6 +56,7 @@ LangString DATA_PAGE_CREATE_FAILED ${LANG_SIMPCHINESE} "无法创建所选文件
 Var DataDirectory
 Var DataDirectoryInput
 Var DataDirectoryBrowseButton
+Var ExistingDataConfig
 
 Name "${INFO_PRODUCTNAME}"
 OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe"
@@ -75,6 +78,9 @@ Function .onInit
   !insertmacro wails.checkArchitecture
   SetRegView 64
   StrCpy $DataDirectory "$APPDATA\OmniCred"
+  StrCpy $ExistingDataConfig "0"
+  IfFileExists "$APPDATA\OmniCred\config.json" 0 +2
+    StrCpy $ExistingDataConfig "1"
   ReadRegStr $0 HKCU "Software\OmniCred" "InstallerDatabasePath"
   ${If} $0 != ""
     ${GetParent} "$0" $DataDirectory
@@ -82,14 +88,18 @@ Function .onInit
 FunctionEnd
 
 Function DataDirectoryPageCreate
-  IfFileExists "$APPDATA\OmniCred\config.json" 0 +2
-    Abort
-
   !insertmacro MUI_HEADER_TEXT "$(DATA_PAGE_TITLE)" "$(DATA_PAGE_SUBTITLE)"
   nsDialogs::Create 1018
   Pop $0
   ${If} $0 == error
     Abort
+  ${EndIf}
+
+  ${If} $ExistingDataConfig == "1"
+    ${NSD_CreateLabel} 0 0 100% 48u "$(DATA_PAGE_EXISTING)"
+    Pop $0
+    nsDialogs::Show
+    Return
   ${EndIf}
 
   ${NSD_CreateLabel} 0 0 100% 12u "$(DATA_PAGE_LABEL)"
@@ -117,6 +127,10 @@ Function DataDirectoryBrowse
 FunctionEnd
 
 Function DataDirectoryPageLeave
+  ${If} $ExistingDataConfig == "1"
+    Return
+  ${EndIf}
+
   ${NSD_GetText} $DataDirectoryInput $DataDirectory
   ${If} $DataDirectory == ""
     MessageBox MB_OK|MB_ICONEXCLAMATION "$(DATA_PAGE_REQUIRED)"
