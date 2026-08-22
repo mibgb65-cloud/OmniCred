@@ -13,15 +13,30 @@ type config struct {
 	DatabasePath string `json:"database_path"`
 }
 
-func ResolveDatabasePath(override string) (string, string, error) {
+func ResolveDatabasePath(override string, development bool) (string, string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		configDir = "data"
+		if development {
+			configDir = "data-dev"
+		}
 	} else {
-		configDir = filepath.Join(configDir, "OmniCred")
+		directoryName := "OmniCred"
+		if development {
+			directoryName = "OmniCred-Dev"
+		}
+		configDir = filepath.Join(configDir, directoryName)
 	}
 	configPath := filepath.Join(configDir, "config.json")
 	defaultPath := filepath.Join(configDir, "omnicred.db")
+	installedPath := ""
+	if !development {
+		installedPath = installerDatabasePath()
+	}
+	return resolveDatabasePath(override, configPath, defaultPath, installedPath)
+}
+
+func resolveDatabasePath(override, configPath, defaultPath, installedPath string) (string, string, error) {
 	if strings.TrimSpace(override) != "" {
 		path, err := filepath.Abs(strings.TrimSpace(override))
 		return path, configPath, err
@@ -29,6 +44,16 @@ func ResolveDatabasePath(override string) (string, string, error) {
 
 	content, err := os.ReadFile(configPath)
 	if errors.Is(err, os.ErrNotExist) {
+		if strings.TrimSpace(installedPath) != "" {
+			path, err := filepath.Abs(strings.TrimSpace(installedPath))
+			if err != nil {
+				return "", "", fmt.Errorf("resolve installer database path: %w", err)
+			}
+			if err := saveDatabasePath(configPath, path); err != nil {
+				return "", "", err
+			}
+			return path, configPath, nil
+		}
 		return defaultPath, configPath, nil
 	}
 	if err != nil {

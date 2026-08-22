@@ -128,6 +128,23 @@ describe("App", () => {
     });
   });
 
+  it("prefills the selected platform when creating an account and keeps it editable", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("user@example.com");
+
+    await user.click(screen.getByRole("button", { name: "GitHub" }));
+    await user.click(screen.getByRole("button", { name: "新增账号" }));
+
+    const dialog = screen.getByRole("dialog", { name: "新增账号" });
+    const platform = within(dialog).getByRole("combobox", { name: /平台/ });
+    expect(platform).toHaveTextContent("GitHub");
+
+    await user.click(platform);
+    await user.click(screen.getByRole("option", { name: "notion" }));
+    expect(platform).toHaveTextContent("notion");
+  });
+
   it("supports desktop keyboard shortcuts", async () => {
     const user = userEvent.setup();
     renderApp();

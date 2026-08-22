@@ -37,6 +37,7 @@ const emptyValues: FormValues = { provider: "", account: "", username: "", passw
 interface CredentialFormDialogProps {
   open: boolean;
   credential: Credential | null;
+  initialProvider: string;
   platforms: Platform[];
   pending: boolean;
   onOpenChange: (open: boolean) => void;
@@ -69,14 +70,14 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       account: item.account,
       username: item.username,
       password: item.password,
-    } : emptyValues);
+    } : { ...emptyValues, provider: props.initialProvider });
     setShowPassword(false);
     setParserOpen(false);
     setRawText("");
     setParserMessage("");
     setParserError("");
     setBatchRows([]);
-  }, [form, props.credential, props.open]);
+  }, [form, props.credential, props.initialProvider, props.open]);
 
   const busy = props.pending || form.formState.isSubmitting;
 

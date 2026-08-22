@@ -177,7 +177,7 @@ export default function App() {
         </main>}
       </div>
 
-      <CredentialFormDialog open={formOpen} credential={editing} platforms={platformItems} pending={saving} onOpenChange={setFormOpen} onSubmit={save} onSubmitBatch={saveBatch} />
+      <CredentialFormDialog open={formOpen} credential={editing} initialProvider={provider} platforms={platformItems} pending={saving} onOpenChange={setFormOpen} onSubmit={save} onSubmitBatch={saveBatch} />
       <DeleteCredentialDialog credential={deleting} pending={mutations.remove.isPending} onOpenChange={(open) => !open && setDeleting(null)} onConfirm={remove} />
       <GithubAccountGeneratorDialog open={githubGeneratorOpen} pending={mutations.create.isPending} onOpenChange={setGithubGeneratorOpen} onConfirm={addGeneratedGithub} />
       <PlatformManagerDialog

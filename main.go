@@ -28,7 +28,6 @@ var assets embed.FS
 var appVersion = "0.1.0"
 
 const (
-	apiAddress    = "127.0.0.1:8787"
 	repositoryURL = "https://github.com/mibgb65-cloud/OmniCred"
 )
 
@@ -43,7 +42,7 @@ func main() {
 func run(logger *slog.Logger) error {
 	databaseOverride := flag.String("db", "", "SQLite database path (overrides saved settings)")
 	flag.Parse()
-	databasePath, configPath, err := appsettings.ResolveDatabasePath(*databaseOverride)
+	databasePath, configPath, err := appsettings.ResolveDatabasePath(*databaseOverride, developmentBuild)
 	if err != nil {
 		return err
 	}
@@ -66,7 +65,7 @@ func run(logger *slog.Logger) error {
 	app := desktop.New(server, logger, databasePath, uninstallerPath)
 
 	err = wails.Run(&options.App{
-		Title:            "OmniCred",
+		Title:            applicationTitle,
 		Width:            1280,
 		Height:           820,
 		MinWidth:         760,
@@ -80,7 +79,7 @@ func run(logger *slog.Logger) error {
 		OnShutdown:       app.Shutdown,
 		Bind:             []interface{}{app},
 		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "com.omnicred.desktop",
+			UniqueId: singleInstanceID,
 			OnSecondInstanceLaunch: func(_ options.SecondInstanceData) {
 				app.SecondInstance()
 			},
