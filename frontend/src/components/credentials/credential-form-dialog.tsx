@@ -28,11 +28,15 @@ const schema = z.object({
   account: z.string().trim().min(1, "请输入登录账号").max(4096, "登录账号过长"),
   username: z.string().trim().max(4096, "用户名过长"),
   password: z.string().min(1, "请输入密码").max(16384, "密码过长"),
+  totp_secret: z.string().max(512, "2FA 密钥过长").refine(
+    (value) => !value.trim() || /^[A-Z2-7]+=*$/i.test(value.replace(/[\s-]/g, "")),
+    "请输入有效的 Base32 2FA 密钥",
+  ),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-const emptyValues: FormValues = { provider: "", account: "", username: "", password: "" };
+const emptyValues: FormValues = { provider: "", account: "", username: "", password: "", totp_secret: "" };
 
 interface CredentialFormDialogProps {
   open: boolean;
@@ -54,6 +58,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function CredentialFormDialog(props: CredentialFormDialogProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [showTOTPSecret, setShowTOTPSecret] = useState(false);
   const [parserOpen, setParserOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [parserMessage, setParserMessage] = useState("");
@@ -70,8 +75,10 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       account: item.account,
       username: item.username,
       password: item.password,
+      totp_secret: item.totp_secret,
     } : { ...emptyValues, provider: props.initialProvider });
     setShowPassword(false);
+    setShowTOTPSecret(false);
     setParserOpen(false);
     setRawText("");
     setParserMessage("");
@@ -128,6 +135,7 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       account: row.account,
       username: row.username ?? "",
       password: row.password,
+      totp_secret: row.totp_secret ?? "",
     })));
   }
 
@@ -267,6 +275,24 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
                   </button>
                 </div>
                 <FieldError id="password-error" message={fieldState.error?.message} />
+              </div>
+            )}
+          />}
+
+          {batchRows.length === 0 && <Controller
+            name="totp_secret"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <div className="space-y-2">
+                <Label htmlFor="totp-secret">2FA 密钥 <span className="font-normal text-muted-foreground">（TOTP，可选）</span></Label>
+                <div className="relative">
+                  <Input {...field} id="totp-secret" type={showTOTPSecret ? "text" : "password"} placeholder="粘贴 Base32 setup key" autoComplete="off" className="pr-12 font-mono" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? "totp-secret-error" : "totp-secret-helper"} />
+                  <button type="button" onClick={() => setShowTOTPSecret((value) => !value)} className="absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={showTOTPSecret ? "隐藏 2FA 密钥" : "显示 2FA 密钥"} aria-pressed={showTOTPSecret}>
+                    {showTOTPSecret ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                  </button>
+                </div>
+                {!fieldState.error && <p id="totp-secret-helper" className="text-xs leading-5 text-muted-foreground">支持 GitHub 等平台常用的 SHA-1、6 位、30 秒 Base32 密钥。密钥会和密码一样明文保存在本地数据库。</p>}
+                <FieldError id="totp-secret-error" message={fieldState.error?.message} />
               </div>
             )}
           />}

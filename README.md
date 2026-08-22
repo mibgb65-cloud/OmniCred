@@ -51,7 +51,7 @@ build/bin/OmniCred.exe
 .\build\bin\OmniCred.exe --db D:\private\omnicred.db
 ```
 
-数据库文件、账号和密码都不会上传到云端。
+数据库文件、账号、密码和 2FA 密钥都不会上传到云端。当前数据库未加密，请像保护密码一样保护 TOTP 密钥。
 
 也可以在应用左侧打开“设置”，选择新的 `.db` 文件位置。应用会在线复制完整数据库并保留旧文件，重启 OmniCred 后使用新位置。保存的路径配置位于：
 
@@ -77,6 +77,7 @@ API 固定监听 `127.0.0.1`，不会监听局域网或公网地址。
 | `GET` | `/api/v1/credentials/{id}` | 读取单个账号 |
 | `PUT` | `/api/v1/credentials/{id}` | 更新账号 |
 | `DELETE` | `/api/v1/credentials/{id}` | 删除账号 |
+| `GET` | `/api/v1/totp` | 读取已启用 2FA 账号的当前 TOTP 验证码 |
 | `POST` | `/api/v1/platforms` | 新增平台 |
 | `GET` | `/api/v1/platforms` | 读取平台及关联账号数量 |
 | `PUT` | `/api/v1/platforms/{id}` | 重命名平台及关联账号 |
@@ -93,6 +94,7 @@ $body = @{
     account = "user@example.com"
     username = "octocat"
     password = "test-password-do-not-use"
+    totp_secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8787/api/v1/credentials" -ContentType "application/json" -Body $body
 ```

@@ -8,10 +8,12 @@ describe("credential text parser", () => {
       邮箱：avery.parker27@example.com
       密码：T7#qL2$vN9!mX4@p:tail
       用户名：AveryParker27
+      2FA密钥：GEZD GNBV GY3T QOJQ
     `)).toEqual({
       account: "avery.parker27@example.com",
       password: "T7#qL2$vN9!mX4@p:tail",
       username: "AveryParker27",
+      totp_secret: "GEZD GNBV GY3T QOJQ",
     });
   });
 

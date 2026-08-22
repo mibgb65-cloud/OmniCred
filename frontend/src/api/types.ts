@@ -4,6 +4,7 @@ export interface Credential {
   account: string;
   username: string;
   password: string;
+  totp_secret: string;
   created_at: string;
   updated_at: string;
 }
@@ -13,6 +14,7 @@ export interface CredentialInput {
   account: string;
   username: string;
   password: string;
+  totp_secret: string;
 }
 
 export interface CredentialFilter {
@@ -22,6 +24,13 @@ export interface CredentialFilter {
 
 export interface CredentialList {
   items: Credential[];
+}
+
+export interface TOTPCodeList {
+  items: Array<{ credential_id: number; code: string }>;
+  seconds_remaining: number;
+  period: number;
+  generated_at: string;
 }
 
 export interface Platform {

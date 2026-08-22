@@ -35,6 +35,15 @@ func (api *Handler) listCredentials(response http.ResponseWriter, request *http.
 	}{Items: items})
 }
 
+func (api *Handler) listTOTPCodes(response http.ResponseWriter, request *http.Request) {
+	codes, err := api.credentials.TOTPCodes(request.Context())
+	if err != nil {
+		api.handleError(response, request, err)
+		return
+	}
+	writeJSON(response, http.StatusOK, codes)
+}
+
 func (api *Handler) getCredential(response http.ResponseWriter, request *http.Request) {
 	id, err := pathID(request)
 	if err != nil {

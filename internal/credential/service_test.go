@@ -67,6 +67,7 @@ func TestServiceCreateNormalizesInputAndPreservesPassword(t *testing.T) {
 
 	item, err := service.Create(context.Background(), CreateInput{
 		Provider: " GitHub ", Account: " user@example.com ", Username: " octocat ", Password: " secret ",
+		TOTPSecret: "gezd gnbv-gy3t qojq-gezd gnbv-gy3t qojq",
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -77,8 +78,30 @@ func TestServiceCreateNormalizesInputAndPreservesPassword(t *testing.T) {
 	if item.Password != " secret " {
 		t.Fatalf("Create() password = %q, want spaces preserved", item.Password)
 	}
+	if item.TOTPSecret != "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" {
+		t.Fatalf("Create() TOTP secret = %q", item.TOTPSecret)
+	}
 	if !item.CreatedAt.Equal(fixed.UTC()) || !item.UpdatedAt.Equal(fixed.UTC()) {
 		t.Fatalf("Create() timestamps = %v / %v", item.CreatedAt, item.UpdatedAt)
+	}
+}
+
+func TestServiceGeneratesCurrentTOTPCodes(t *testing.T) {
+	store := newMemoryStore()
+	store.items[1] = Credential{ID: 1, TOTPSecret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"}
+	store.items[2] = Credential{ID: 2}
+	service := NewService(store)
+	service.now = func() time.Time { return time.Unix(59, 0) }
+
+	result, err := service.TOTPCodes(context.Background())
+	if err != nil {
+		t.Fatalf("TOTPCodes() error = %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].CredentialID != 1 || result.Items[0].Code != "287082" {
+		t.Fatalf("TOTPCodes() items = %#v", result.Items)
+	}
+	if result.SecondsRemaining != 1 || result.Period != 30 {
+		t.Fatalf("TOTPCodes() timing = %d / %d", result.SecondsRemaining, result.Period)
 	}
 }
 
@@ -91,6 +114,7 @@ func TestServiceCreateRejectsInvalidInputWithoutWriting(t *testing.T) {
 		{"provider", CreateInput{Account: "a", Password: "p"}, "provider"},
 		{"account", CreateInput{Provider: "github", Password: "p"}, "account"},
 		{"password", CreateInput{Provider: "github", Account: "a"}, "password"},
+		{"totp secret", CreateInput{Provider: "github", Account: "a", Password: "p", TOTPSecret: "invalid!"}, "totp_secret"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

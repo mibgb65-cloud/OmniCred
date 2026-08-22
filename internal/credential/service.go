@@ -2,9 +2,12 @@ package credential
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"omnicred/internal/totp"
 )
 
 type Service struct {
@@ -24,12 +27,13 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Credenti
 
 	now := service.now().UTC()
 	return service.store.Create(ctx, Credential{
-		Provider:  normalized.Provider,
-		Account:   normalized.Account,
-		Username:  normalized.Username,
-		Password:  normalized.Password,
-		CreatedAt: now,
-		UpdatedAt: now,
+		Provider:   normalized.Provider,
+		Account:    normalized.Account,
+		Username:   normalized.Username,
+		Password:   normalized.Password,
+		TOTPSecret: normalized.TOTPSecret,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	})
 }
 
@@ -63,8 +67,31 @@ func (service *Service) Update(ctx context.Context, id int64, input UpdateInput)
 	existing.Account = normalized.Account
 	existing.Username = normalized.Username
 	existing.Password = normalized.Password
+	existing.TOTPSecret = normalized.TOTPSecret
 	existing.UpdatedAt = service.now().UTC()
 	return service.store.Update(ctx, existing)
+}
+
+func (service *Service) TOTPCodes(ctx context.Context) (TOTPCodeList, error) {
+	items, err := service.store.List(ctx, Filter{})
+	if err != nil {
+		return TOTPCodeList{}, err
+	}
+	now := service.now().UTC()
+	codes := make([]TOTPCode, 0)
+	for _, item := range items {
+		if item.TOTPSecret == "" {
+			continue
+		}
+		code, err := totp.Generate(item.TOTPSecret, now)
+		if err != nil {
+			return TOTPCodeList{}, fmt.Errorf("generate TOTP for credential %d: %w", item.ID, err)
+		}
+		codes = append(codes, TOTPCode{CredentialID: item.ID, Code: code})
+	}
+	return TOTPCodeList{
+		Items: codes, SecondsRemaining: totp.SecondsRemaining(now), Period: totp.Period, GeneratedAt: now,
+	}, nil
 }
 
 func (service *Service) Delete(ctx context.Context, id int64) error {
@@ -85,6 +112,7 @@ func validateInput(input CreateInput) (CreateInput, error) {
 	input.Provider = strings.ToLower(strings.TrimSpace(input.Provider))
 	input.Account = strings.TrimSpace(input.Account)
 	input.Username = strings.TrimSpace(input.Username)
+	input.TOTPSecret = strings.TrimSpace(input.TOTPSecret)
 
 	checks := []struct {
 		field    string
@@ -96,6 +124,7 @@ func validateInput(input CreateInput) (CreateInput, error) {
 		{"account", input.Account, true, maxTextLength},
 		{"username", input.Username, false, maxTextLength},
 		{"password", input.Password, true, maxPasswordLength},
+		{"totp_secret", input.TOTPSecret, false, 512},
 	}
 	for _, check := range checks {
 		if check.required && check.value == "" {
@@ -104,6 +133,13 @@ func validateInput(input CreateInput) (CreateInput, error) {
 		if utf8.RuneCountInString(check.value) > check.maximum {
 			return CreateInput{}, &ValidationError{Field: check.field, Message: "is too long"}
 		}
+	}
+	if input.TOTPSecret != "" {
+		normalized, err := totp.NormalizeSecret(input.TOTPSecret)
+		if err != nil {
+			return CreateInput{}, &ValidationError{Field: "totp_secret", Message: "must be a valid Base32 secret"}
+		}
+		input.TOTPSecret = normalized
 	}
 	return input, nil
 }

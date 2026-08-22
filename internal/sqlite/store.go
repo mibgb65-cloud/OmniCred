@@ -10,7 +10,7 @@ import (
 	"omnicred/internal/credential"
 )
 
-const credentialColumns = "id, provider, account, username, password, created_at, updated_at"
+const credentialColumns = "id, provider, account, username, password, totp_secret, created_at, updated_at"
 
 type Store struct {
 	db *sql.DB
@@ -30,9 +30,9 @@ func (store *Store) Create(ctx context.Context, item credential.Credential) (cre
 		return credential.Credential{}, err
 	}
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO credentials (provider, account, username, password, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		item.Provider, item.Account, item.Username, item.Password,
+		INSERT INTO credentials (provider, account, username, password, totp_secret, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret,
 		formatTime(item.CreatedAt), formatTime(item.UpdatedAt),
 	)
 	if err != nil {
@@ -105,9 +105,9 @@ func (store *Store) Update(ctx context.Context, item credential.Credential) (cre
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE credentials
-		SET provider = ?, account = ?, username = ?, password = ?, updated_at = ?
+		SET provider = ?, account = ?, username = ?, password = ?, totp_secret = ?, updated_at = ?
 		WHERE id = ?`,
-		item.Provider, item.Account, item.Username, item.Password, formatTime(item.UpdatedAt), item.ID,
+		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret, formatTime(item.UpdatedAt), item.ID,
 	)
 	if err != nil {
 		return credential.Credential{}, fmt.Errorf("update credential: %w", err)
@@ -147,7 +147,7 @@ type scanner interface {
 func scanCredential(row scanner) (credential.Credential, error) {
 	var item credential.Credential
 	var createdAt, updatedAt string
-	err := row.Scan(&item.ID, &item.Provider, &item.Account, &item.Username, &item.Password, &createdAt, &updatedAt)
+	err := row.Scan(&item.ID, &item.Provider, &item.Account, &item.Username, &item.Password, &item.TOTPSecret, &createdAt, &updatedAt)
 	if err != nil {
 		return credential.Credential{}, err
 	}

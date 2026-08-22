@@ -2,6 +2,7 @@ export interface ParsedCredentialText {
   account?: string;
   password?: string;
   username?: string;
+  totp_secret?: string;
 }
 
 const labels: Record<string, keyof ParsedCredentialText> = {
@@ -22,6 +23,11 @@ const labels: Record<string, keyof ParsedCredentialText> = {
   昵称: "username",
   username: "username",
   user: "username",
+  "2fa": "totp_secret",
+  "2fa密钥": "totp_secret",
+  totp: "totp_secret",
+  totp密钥: "totp_secret",
+  验证码密钥: "totp_secret",
 };
 
 export function parseCredentialText(text: string): ParsedCredentialText {

@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, EyeOff, Pencil, Trash2, UserRound } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -10,6 +10,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface CredentialCardProps {
   item: Credential;
+  totpCode?: string;
+  totpPeriod: number;
+  totpSecondsRemaining: number;
   onEdit: (item: Credential) => void;
   onDelete: (item: Credential) => void;
 }
@@ -23,20 +26,23 @@ function formatUpdatedAt(value: string) {
   }).format(new Date(value));
 }
 
-export function CredentialCard({ item, onEdit, onDelete }: CredentialCardProps) {
+export function CredentialCard({ item, totpCode, totpPeriod, totpSecondsRemaining, onEdit, onDelete }: CredentialCardProps) {
   const [visible, setVisible] = useState(false);
-  const [copied, setCopied] = useState<"account" | "password" | null>(null);
+  const [copied, setCopied] = useState<"account" | "password" | "totp" | null>(null);
 
-  async function copy(value: string, field: "account" | "password") {
+  async function copy(value: string, field: "account" | "password" | "totp") {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(field);
-      toast.success(field === "password" ? "密码已复制" : "账号已复制");
+      toast.success(field === "password" ? "密码已复制" : field === "totp" ? "2FA 验证码已复制" : "账号已复制");
       window.setTimeout(() => setCopied(null), 1500);
     } catch {
       toast.error("复制失败，请手动选择内容");
     }
   }
+
+  const formattedTOTP = totpCode ? `${totpCode.slice(0, 3)} ${totpCode.slice(3)}` : "--- ---";
+  const totpProgress = Math.max(0, Math.min(1, totpSecondsRemaining / totpPeriod));
 
   return (
     <article data-credential-card className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/25 hover:shadow-md hover:shadow-slate-950/5 dark:hover:shadow-black/15">
@@ -102,6 +108,34 @@ export function CredentialCard({ item, onEdit, onDelete }: CredentialCardProps) 
             </div>
           </div>
         </div>
+
+        {item.totp_secret && (
+          <div className="relative overflow-hidden rounded-lg border border-primary/25 bg-primary/6 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
+                  <ShieldCheck className="size-3.5" aria-hidden="true" />
+                  2FA 验证码
+                </div>
+                <p className="mt-1.5 font-mono text-lg font-bold tracking-[0.18em] text-foreground">{formattedTOTP}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="min-w-8 text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                  {totpSecondsRemaining > 0 ? `${totpSecondsRemaining}s` : "同步"}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => totpCode && copy(totpCode, "totp")} disabled={!totpCode} aria-label="复制 2FA 验证码">
+                      {copied === "totp" ? <Check className="size-4 text-emerald-500" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>复制验证码</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+            <span className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary transition-transform duration-200 motion-reduce:transition-none" style={{ transform: `scaleX(${totpProgress})` }} aria-hidden="true" />
+          </div>
+        )}
       </div>
 
       <footer className="mt-3.5 flex items-center justify-between gap-3 border-t border-border/70 pt-3.5">

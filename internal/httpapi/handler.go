@@ -36,6 +36,8 @@ func New(credentials *credential.Service, platforms *platform.Service, settings 
 	mux.HandleFunc("PUT /api/v1/credentials/{id}", api.updateCredential)
 	mux.HandleFunc("DELETE /api/v1/credentials/{id}", api.deleteCredential)
 	mux.HandleFunc("/api/v1/credentials/{id}", api.methodNotAllowed)
+	mux.HandleFunc("GET /api/v1/totp", api.listTOTPCodes)
+	mux.HandleFunc("/api/v1/totp", api.methodNotAllowed)
 	mux.HandleFunc("POST /api/v1/platforms", api.createPlatform)
 	mux.HandleFunc("GET /api/v1/platforms", api.listPlatforms)
 	mux.HandleFunc("/api/v1/platforms", api.methodNotAllowed)

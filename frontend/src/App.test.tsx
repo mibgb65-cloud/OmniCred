@@ -13,6 +13,7 @@ const saved: Credential = {
   account: "user@example.com",
   username: "octocat",
   password: "test-password-do-not-use",
+  totp_secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
   created_at: "2026-08-21T02:00:00Z",
   updated_at: "2026-08-21T02:00:00Z",
 };
@@ -48,6 +49,12 @@ function renderApp() {
 describe("App", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/api/v1/totp")) return jsonResponse({
+        items: [{ credential_id: 1, code: "287082" }],
+        seconds_remaining: 17,
+        period: 30,
+        generated_at: "2026-08-22T02:00:00Z",
+      });
       if (String(input).endsWith("/api/v1/settings/status")) return jsonResponse({
         version: "0.1.0",
         database_path: "C:\\Users\\test\\AppData\\Roaming\\OmniCred\\omnicred.db",
@@ -99,6 +106,9 @@ describe("App", () => {
     expect(screen.queryByText(saved.password)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "显示密码" }));
     expect(screen.getByText(saved.password)).toBeInTheDocument();
+    expect(await screen.findByText("287 082")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "复制 2FA 验证码" }));
+    expect(await navigator.clipboard.readText()).toBe("287082");
   });
 
   it("validates and submits the create form", async () => {
@@ -115,16 +125,17 @@ describe("App", () => {
     await user.click(within(dialog).getByRole("combobox", { name: /平台/ }));
     await user.click(screen.getByRole("option", { name: "notion" }));
     await user.click(within(dialog).getByRole("button", { name: "从文本快速解析" }));
-    await user.type(within(dialog).getByLabelText("账号文本"), "邮箱：new@example.com\n密码：new-password\n用户名：person");
+    await user.type(within(dialog).getByLabelText("账号文本"), "邮箱：new@example.com\n密码：new-password\n用户名：person\n2FA密钥：GEZD GNBV GY3T QOJQ");
     await user.click(within(dialog).getByRole("button", { name: "解析并填入" }));
     expect(within(dialog).getByLabelText(/登录账号/)).toHaveValue("new@example.com");
     expect(within(dialog).getByLabelText(/^用户名/)).toHaveValue("person");
     expect(within(dialog).getByLabelText(/^密码/)).toHaveValue("new-password");
+    expect(within(dialog).getByLabelText(/2FA 密钥/, { selector: "input" })).toHaveValue("GEZD GNBV GY3T QOJQ");
     await user.click(within(dialog).getByRole("button", { name: "保存账号" }));
 
     await waitFor(() => {
       const request = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith("/api/v1/credentials") && init?.method === "POST");
-      expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({ provider: "notion", account: "new@example.com", username: "person", password: "new-password" });
+      expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({ provider: "notion", account: "new@example.com", username: "person", password: "new-password", totp_secret: "GEZD GNBV GY3T QOJQ" });
     });
   });
 

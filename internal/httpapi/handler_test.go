@@ -84,15 +84,20 @@ func TestCredentialAPIFlow(t *testing.T) {
 	handler := newTestHandler(io.Discard)
 
 	created := performJSON(t, handler, http.MethodPost, "/api/v1/credentials", `{
-		"provider":"GitHub","account":"user@example.com","username":"octocat","password":"secret"
+		"provider":"GitHub","account":"user@example.com","username":"octocat","password":"secret",
+		"totp_secret":"gezd gnbv gy3t qojq gezd gnbv gy3t qojq"
 	}`)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create status = %d, body = %s", created.Code, created.Body.String())
 	}
 	var item credential.Credential
 	decodeResponse(t, created, &item)
-	if item.ID != 1 || item.Provider != "github" || item.Password != "secret" {
+	if item.ID != 1 || item.Provider != "github" || item.Password != "secret" || item.TOTPSecret != "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" {
 		t.Fatalf("created item = %#v", item)
+	}
+	codes := performJSON(t, handler, http.MethodGet, "/api/v1/totp", "")
+	if codes.Code != http.StatusOK || !strings.Contains(codes.Body.String(), `"credential_id":1`) {
+		t.Fatalf("TOTP response = %d, %s", codes.Code, codes.Body.String())
 	}
 
 	listed := performJSON(t, handler, http.MethodGet, "/api/v1/credentials?provider=github&q=octo", "")
@@ -131,6 +136,7 @@ func TestAPIRejectsInvalidRequests(t *testing.T) {
 		{"content type", http.MethodPost, "/api/v1/credentials", "text/plain", `{}`, 415, "unsupported_media_type"},
 		{"unknown field", http.MethodPost, "/api/v1/credentials", "application/json", `{"provider":"x","account":"a","password":"p","extra":true}`, 400, "invalid_request"},
 		{"missing password", http.MethodPost, "/api/v1/credentials", "application/json", `{"provider":"x","account":"a"}`, 400, "invalid_request"},
+		{"invalid TOTP secret", http.MethodPost, "/api/v1/credentials", "application/json", `{"provider":"x","account":"a","password":"p","totp_secret":"invalid!"}`, 400, "invalid_request"},
 		{"bad id", http.MethodGet, "/api/v1/credentials/nope", "", "", 400, "invalid_request"},
 		{"method", http.MethodPatch, "/api/v1/credentials/1", "application/json", `{}`, 405, "method_not_allowed"},
 	}
@@ -153,7 +159,8 @@ func TestAPISecurityHeadersAndLogsOmitPassword(t *testing.T) {
 	var logs bytes.Buffer
 	handler := newTestHandler(&logs)
 	response := performJSON(t, handler, http.MethodPost, "/api/v1/credentials", `{
-		"provider":"github","account":"user@example.com","password":"never-log-this"
+		"provider":"github","account":"user@example.com","password":"never-log-this",
+		"totp_secret":"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
 	}`)
 	if response.Header().Get("Access-Control-Allow-Origin") != "" {
 		t.Fatal("CORS must not be enabled")
@@ -161,7 +168,7 @@ func TestAPISecurityHeadersAndLogsOmitPassword(t *testing.T) {
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("Cache-Control = %q", response.Header().Get("Cache-Control"))
 	}
-	if strings.Contains(logs.String(), "never-log-this") || strings.Contains(logs.String(), "user@example.com") {
+	if strings.Contains(logs.String(), "never-log-this") || strings.Contains(logs.String(), "user@example.com") || strings.Contains(logs.String(), "GEZDGNBV") {
 		t.Fatalf("logs contain credential data: %s", logs.String())
 	}
 }

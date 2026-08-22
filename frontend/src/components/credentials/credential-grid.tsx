@@ -7,6 +7,7 @@ import type { Credential } from "@/api/types";
 import { CredentialCard } from "@/components/credentials/credential-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTOTPCodes } from "@/hooks/use-totp-codes";
 
 gsap.registerPlugin(useGSAP);
 
@@ -25,6 +26,8 @@ interface CredentialGridProps {
 
 export function CredentialGrid(props: CredentialGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const totpCodes = useTOTPCodes(props.items.some((item) => Boolean(item.totp_secret)));
+  const codesByCredential = new Map(totpCodes.data?.items.map((item) => [item.credential_id, item.code]) ?? []);
   const animationKey = props.isLoading
     ? "loading"
     : props.error
@@ -96,7 +99,17 @@ export function CredentialGrid(props: CredentialGridProps) {
 
   return (
     <div ref={containerRef} className={gridClassName}>
-      {props.items.map((item) => <CredentialCard key={item.id} item={item} onEdit={props.onEdit} onDelete={props.onDelete} />)}
+      {props.items.map((item) => (
+        <CredentialCard
+          key={item.id}
+          item={item}
+          totpCode={codesByCredential.get(item.id)}
+          totpPeriod={totpCodes.data?.period ?? 30}
+          totpSecondsRemaining={totpCodes.data?.seconds_remaining ?? 0}
+          onEdit={props.onEdit}
+          onDelete={props.onDelete}
+        />
+      ))}
     </div>
   );
 }

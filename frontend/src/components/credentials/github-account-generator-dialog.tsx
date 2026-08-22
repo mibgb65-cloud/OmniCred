@@ -71,7 +71,7 @@ export function GithubAccountGeneratorDialog(props: GithubAccountGeneratorDialog
       return;
     }
     setErrors({});
-    await props.onConfirm({ provider: "github", account: parsedEmail.success ? parsedEmail.data : email.trim(), username, password });
+    await props.onConfirm({ provider: "github", account: parsedEmail.success ? parsedEmail.data : email.trim(), username, password, totp_secret: "" });
   }
 
   function regenerateAll() {

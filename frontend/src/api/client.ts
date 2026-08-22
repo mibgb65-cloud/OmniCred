@@ -9,6 +9,7 @@ import type {
   PlatformList,
   RuntimeStatus,
   StorageResult,
+  TOTPCodeList,
   UpdateInfo,
 } from "@/api/types";
 
@@ -55,6 +56,10 @@ export function listCredentials(filter: CredentialFilter): Promise<CredentialLis
   if (filter.query) params.set("q", filter.query);
   const suffix = params.size > 0 ? `?${params.toString()}` : "";
   return request<CredentialList>(`/api/v1/credentials${suffix}`);
+}
+
+export function listTOTPCodes(): Promise<TOTPCodeList> {
+  return request<TOTPCodeList>("/api/v1/totp");
 }
 
 export function createCredential(input: CredentialInput): Promise<Credential> {
