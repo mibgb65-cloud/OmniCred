@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "OmniCred",
+  "outputfilename": "OmniCred",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "OmniCred",
+    "email": ""
+  },
+  "info": {
+    "companyName": "OmniCred",
+    "productName": "OmniCred",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright 2026 OmniCred",
+    "comments": "Local desktop credential manager"
+  }
+}
