@@ -51,7 +51,7 @@ build/bin/OmniCred.exe
 .\build\bin\OmniCred.exe --db D:\private\omnicred.db
 ```
 
-数据库文件、账号、密码和 2FA 密钥都不会上传到云端。当前数据库未加密，请像保护密码一样保护 TOTP 密钥。
+数据库文件、账号、密码、2FA 密钥和恢复码都不会上传到云端。当前数据库未加密，请像保护密码一样保护 TOTP 密钥与恢复码。
 
 也可以在应用左侧打开“设置”，选择新的 `.db` 文件位置。应用会在线复制完整数据库并保留旧文件，重启 OmniCred 后使用新位置。保存的路径配置位于：
 
@@ -95,6 +95,7 @@ $body = @{
     username = "octocat"
     password = "test-password-do-not-use"
     totp_secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    recovery_codes = @("alpha-bravo", "charlie-delta")
 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8787/api/v1/credentials" -ContentType "application/json" -Body $body
 ```

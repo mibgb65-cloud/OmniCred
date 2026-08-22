@@ -9,22 +9,24 @@ const (
 )
 
 type Credential struct {
-	ID         int64     `json:"id"`
-	Provider   string    `json:"provider"`
-	Account    string    `json:"account"`
-	Username   string    `json:"username"`
-	Password   string    `json:"password"`
-	TOTPSecret string    `json:"totp_secret"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID            int64     `json:"id"`
+	Provider      string    `json:"provider"`
+	Account       string    `json:"account"`
+	Username      string    `json:"username"`
+	Password      string    `json:"password"`
+	TOTPSecret    string    `json:"totp_secret"`
+	RecoveryCodes []string  `json:"recovery_codes"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type CreateInput struct {
-	Provider   string `json:"provider"`
-	Account    string `json:"account"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	TOTPSecret string `json:"totp_secret"`
+	Provider      string   `json:"provider"`
+	Account       string   `json:"account"`
+	Username      string   `json:"username"`
+	Password      string   `json:"password"`
+	TOTPSecret    string   `json:"totp_secret"`
+	RecoveryCodes []string `json:"recovery_codes"`
 }
 
 type UpdateInput = CreateInput

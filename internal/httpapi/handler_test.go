@@ -85,14 +85,15 @@ func TestCredentialAPIFlow(t *testing.T) {
 
 	created := performJSON(t, handler, http.MethodPost, "/api/v1/credentials", `{
 		"provider":"GitHub","account":"user@example.com","username":"octocat","password":"secret",
-		"totp_secret":"gezd gnbv gy3t qojq gezd gnbv gy3t qojq"
+		"totp_secret":"gezd gnbv gy3t qojq gezd gnbv gy3t qojq",
+		"recovery_codes":[" alpha-bravo ","charlie-delta"]
 	}`)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create status = %d, body = %s", created.Code, created.Body.String())
 	}
 	var item credential.Credential
 	decodeResponse(t, created, &item)
-	if item.ID != 1 || item.Provider != "github" || item.Password != "secret" || item.TOTPSecret != "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" {
+	if item.ID != 1 || item.Provider != "github" || item.Password != "secret" || item.TOTPSecret != "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" || len(item.RecoveryCodes) != 2 {
 		t.Fatalf("created item = %#v", item)
 	}
 	codes := performJSON(t, handler, http.MethodGet, "/api/v1/totp", "")
@@ -160,7 +161,8 @@ func TestAPISecurityHeadersAndLogsOmitPassword(t *testing.T) {
 	handler := newTestHandler(&logs)
 	response := performJSON(t, handler, http.MethodPost, "/api/v1/credentials", `{
 		"provider":"github","account":"user@example.com","password":"never-log-this",
-		"totp_secret":"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+		"totp_secret":"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+		"recovery_codes":["never-log-recovery"]
 	}`)
 	if response.Header().Get("Access-Control-Allow-Origin") != "" {
 		t.Fatal("CORS must not be enabled")
@@ -168,7 +170,7 @@ func TestAPISecurityHeadersAndLogsOmitPassword(t *testing.T) {
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("Cache-Control = %q", response.Header().Get("Cache-Control"))
 	}
-	if strings.Contains(logs.String(), "never-log-this") || strings.Contains(logs.String(), "user@example.com") || strings.Contains(logs.String(), "GEZDGNBV") {
+	if strings.Contains(logs.String(), "never-log-this") || strings.Contains(logs.String(), "user@example.com") || strings.Contains(logs.String(), "GEZDGNBV") || strings.Contains(logs.String(), "never-log-recovery") {
 		t.Fatalf("logs contain credential data: %s", logs.String())
 	}
 }

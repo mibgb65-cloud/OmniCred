@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, Eye, EyeOff, FileInput, ListChecks, LoaderCircle, ScanText, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, FileInput, KeyRound, ListChecks, LoaderCircle, ScanText, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -32,11 +32,18 @@ const schema = z.object({
     (value) => !value.trim() || /^[A-Z2-7]+=*$/i.test(value.replace(/[\s-]/g, "")),
     "请输入有效的 Base32 2FA 密钥",
   ),
+  recovery_codes: z.string().max(25700, "恢复码内容过长").refine(
+    (value) => parseRecoveryCodes(value).length <= 100 && parseRecoveryCodes(value).every((code) => code.length <= 256),
+    "最多保存 100 个恢复码，每个不超过 256 个字符",
+  ).refine(
+    (value) => new Set(parseRecoveryCodes(value)).size === parseRecoveryCodes(value).length,
+    "恢复码不能重复",
+  ),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-const emptyValues: FormValues = { provider: "", account: "", username: "", password: "", totp_secret: "" };
+const emptyValues: FormValues = { provider: "", account: "", username: "", password: "", totp_secret: "", recovery_codes: "" };
 
 interface CredentialFormDialogProps {
   open: boolean;
@@ -59,6 +66,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 export function CredentialFormDialog(props: CredentialFormDialogProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showTOTPSecret, setShowTOTPSecret] = useState(false);
+  const [recoveryCodesOpen, setRecoveryCodesOpen] = useState(false);
   const [parserOpen, setParserOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [parserMessage, setParserMessage] = useState("");
@@ -76,9 +84,11 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       username: item.username,
       password: item.password,
       totp_secret: item.totp_secret,
+      recovery_codes: item.recovery_codes.join("\n"),
     } : { ...emptyValues, provider: props.initialProvider });
     setShowPassword(false);
     setShowTOTPSecret(false);
+    setRecoveryCodesOpen(false);
     setParserOpen(false);
     setRawText("");
     setParserMessage("");
@@ -120,7 +130,10 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
 
   function submitForm(event: FormEvent<HTMLFormElement>) {
     if (batchRows.length === 0) {
-      void form.handleSubmit(props.onSubmit)(event);
+      void form.handleSubmit(
+        (values) => props.onSubmit({ ...values, recovery_codes: parseRecoveryCodes(values.recovery_codes) }),
+        (errors) => { if (errors.recovery_codes) setRecoveryCodesOpen(true); },
+      )(event);
       return;
     }
     event.preventDefault();
@@ -136,6 +149,7 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       username: row.username ?? "",
       password: row.password,
       totp_secret: row.totp_secret ?? "",
+      recovery_codes: [],
     })));
   }
 
@@ -297,6 +311,43 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
             )}
           />}
 
+          {batchRows.length === 0 && <Controller
+            name="recovery_codes"
+            control={form.control}
+            render={({ field, fieldState }) => {
+              const count = parseRecoveryCodes(field.value).length;
+              return (
+                <section className="overflow-hidden rounded-xl border border-border bg-muted/28" aria-label="恢复码设置">
+                  <button
+                    type="button"
+                    className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    aria-label="管理恢复码"
+                    aria-expanded={recoveryCodesOpen}
+                    aria-controls="recovery-codes-panel"
+                    onClick={() => setRecoveryCodesOpen((value) => !value)}
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><KeyRound className="size-4" aria-hidden="true" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold">恢复码 <span className="font-normal text-muted-foreground">（可选）</span></span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">一行一个，仅在失去其他 2FA 方式时使用</span>
+                    </span>
+                    {count > 0 && <Badge variant="outline" className="shrink-0">{count} 个</Badge>}
+                    <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", recoveryCodesOpen && "rotate-180")} aria-hidden="true" />
+                  </button>
+                  {recoveryCodesOpen && (
+                    <div id="recovery-codes-panel" className="space-y-2 border-t border-border p-3.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <Label htmlFor="recovery-codes">恢复码列表</Label>
+                      <Textarea {...field} id="recovery-codes" rows={5} placeholder={"alpha-bravo\ncharlie-delta"} className="resize-none font-mono" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? "recovery-codes-error" : "recovery-codes-helper"} />
+                      {!fieldState.error && <p id="recovery-codes-helper" className="text-xs leading-5 text-muted-foreground">恢复码通常只能使用一次。使用或重新生成后，请手动更新这里的列表；内容会明文保存在本地数据库。</p>}
+                      <FieldError id="recovery-codes-error" message={fieldState.error?.message} />
+                    </div>
+                  )}
+                  {!recoveryCodesOpen && <FieldError id="recovery-codes-error" message={fieldState.error?.message} />}
+                </section>
+              );
+            }}
+          />}
+
           </div>
 
           <DialogFooter className="shrink-0 border-t border-border bg-card/95 px-6 py-4 sm:px-7">
@@ -310,4 +361,8 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function parseRecoveryCodes(value: string) {
+  return value.split(/\r?\n/).map((code) => code.trim()).filter(Boolean);
 }

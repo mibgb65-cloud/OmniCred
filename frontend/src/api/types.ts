@@ -5,6 +5,7 @@ export interface Credential {
   username: string;
   password: string;
   totp_secret: string;
+  recovery_codes: string[];
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export interface CredentialInput {
   username: string;
   password: string;
   totp_secret: string;
+  recovery_codes: string[];
 }
 
 export interface CredentialFilter {

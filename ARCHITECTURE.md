@@ -230,6 +230,7 @@ type Credential struct {
     Username  string    `json:"username"`
     Password  string    `json:"password"`
     TOTPSecret string    `json:"totp_secret"`
+    RecoveryCodes []string `json:"recovery_codes"`
     CreatedAt time.Time `json:"created_at"`
     UpdatedAt time.Time `json:"updated_at"`
 }
@@ -249,6 +250,7 @@ type Filter struct {
 | `username` | 否 | 去除首尾空格；最大 4096 个字符 |
 | `password` | 是 | 不能为空；不去除空格；最大 16384 个字符 |
 | `totp_secret` | 否 | Base32 TOTP 密钥；去除空格和横线并转为大写；最大 512 个字符 |
+| `recovery_codes` | 否 | 一次性恢复码列表；最多 100 个；每个最多 256 个字符；不允许重复 |
 
 密码不能执行 `TrimSpace`，因为空格可能是密码的有效组成部分。
 
@@ -276,6 +278,8 @@ PRAGMA user_version = 1;
 ```
 
 `003_add_totp_secret.sql` 为现有数据库增加 `totp_secret TEXT NOT NULL DEFAULT ''`，并将 `user_version` 更新为 `3`。
+
+`004_add_recovery_codes.sql` 增加 `recovery_codes TEXT NOT NULL DEFAULT '[]'`，以 JSON 数组保存恢复码，并将 `user_version` 更新为 `4`。
 
 时间统一保存为 UTC 的 RFC 3339 格式，API 也返回 RFC 3339 字符串。
 
@@ -380,7 +384,7 @@ API 版本前缀：
 | `DELETE` | `/api/v1/credentials/{id}` | 删除账号 | `204` |
 | `GET` | `/api/v1/totp` | 获取已启用 2FA 账号的当前 TOTP 验证码 | `200` |
 
-读取接口会返回密码和 TOTP 密钥字段，这是该工具用于读取凭据的核心行为。调用方必须把整个响应视为敏感信息。
+读取接口会返回密码、TOTP 密钥和恢复码字段，这是该工具用于读取凭据的核心行为。调用方必须把整个响应视为敏感信息。
 
 ### 11.2 健康检查
 

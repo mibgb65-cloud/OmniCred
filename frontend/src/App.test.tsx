@@ -14,6 +14,7 @@ const saved: Credential = {
   username: "octocat",
   password: "test-password-do-not-use",
   totp_secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+  recovery_codes: ["alpha-bravo", "charlie-delta"],
   created_at: "2026-08-21T02:00:00Z",
   updated_at: "2026-08-21T02:00:00Z",
 };
@@ -109,6 +110,11 @@ describe("App", () => {
     expect(await screen.findByText("287 082")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "复制 2FA 验证码" }));
     expect(await navigator.clipboard.readText()).toBe("287082");
+    await user.click(screen.getByRole("button", { name: "查看恢复码" }));
+    const recoveryDialog = screen.getByRole("dialog", { name: "恢复码" });
+    expect(within(recoveryDialog).getByText("alpha-bravo")).toBeInTheDocument();
+    await user.click(within(recoveryDialog).getByRole("button", { name: "复制恢复码 alpha-bravo" }));
+    expect(await navigator.clipboard.readText()).toBe("alpha-bravo");
   });
 
   it("validates and submits the create form", async () => {
@@ -131,11 +137,16 @@ describe("App", () => {
     expect(within(dialog).getByLabelText(/^用户名/)).toHaveValue("person");
     expect(within(dialog).getByLabelText(/^密码/)).toHaveValue("new-password");
     expect(within(dialog).getByLabelText(/2FA 密钥/, { selector: "input" })).toHaveValue("GEZD GNBV GY3T QOJQ");
+    await user.click(within(dialog).getByRole("button", { name: "管理恢复码" }));
+    await user.type(within(dialog).getByLabelText("恢复码列表"), "alpha-bravo{enter}charlie-delta");
     await user.click(within(dialog).getByRole("button", { name: "保存账号" }));
 
     await waitFor(() => {
       const request = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith("/api/v1/credentials") && init?.method === "POST");
-      expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({ provider: "notion", account: "new@example.com", username: "person", password: "new-password", totp_secret: "GEZD GNBV GY3T QOJQ" });
+      expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+        provider: "notion", account: "new@example.com", username: "person", password: "new-password",
+        totp_secret: "GEZD GNBV GY3T QOJQ", recovery_codes: ["alpha-bravo", "charlie-delta"],
+      });
     });
   });
 

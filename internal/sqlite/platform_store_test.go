@@ -74,7 +74,7 @@ func TestPlatformMigrationSeedsDefaultsAndSetsVersion(t *testing.T) {
 		t.Fatalf("read version: %v", err)
 	}
 	items, err := NewStore(db).ListPlatforms(ctx)
-	if err != nil || version != 3 || findPlatform(items, "github") == nil || findPlatform(items, "google") == nil {
+	if err != nil || version != 4 || findPlatform(items, "github") == nil || findPlatform(items, "google") == nil {
 		t.Fatalf("migration version = %d, platforms = %#v, error = %v", version, items, err)
 	}
 }
@@ -114,8 +114,8 @@ func TestPlatformMigrationImportsExistingCredentialProviders(t *testing.T) {
 		t.Fatalf("imported platform = %#v, error = %v", custom, err)
 	}
 	credentialItem, err := NewStore(db).Get(ctx, 1)
-	if err != nil || credentialItem.TOTPSecret != "" {
-		t.Fatalf("legacy credential TOTP secret = %q, error = %v", credentialItem.TOTPSecret, err)
+	if err != nil || credentialItem.TOTPSecret != "" || len(credentialItem.RecoveryCodes) != 0 {
+		t.Fatalf("legacy credential security fields = %q / %#v, error = %v", credentialItem.TOTPSecret, credentialItem.RecoveryCodes, err)
 	}
 }
 

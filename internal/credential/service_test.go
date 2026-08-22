@@ -67,7 +67,8 @@ func TestServiceCreateNormalizesInputAndPreservesPassword(t *testing.T) {
 
 	item, err := service.Create(context.Background(), CreateInput{
 		Provider: " GitHub ", Account: " user@example.com ", Username: " octocat ", Password: " secret ",
-		TOTPSecret: "gezd gnbv-gy3t qojq-gezd gnbv-gy3t qojq",
+		TOTPSecret:    "gezd gnbv-gy3t qojq-gezd gnbv-gy3t qojq",
+		RecoveryCodes: []string{" alpha-bravo ", "charlie-delta", ""},
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -80,6 +81,9 @@ func TestServiceCreateNormalizesInputAndPreservesPassword(t *testing.T) {
 	}
 	if item.TOTPSecret != "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ" {
 		t.Fatalf("Create() TOTP secret = %q", item.TOTPSecret)
+	}
+	if len(item.RecoveryCodes) != 2 || item.RecoveryCodes[0] != "alpha-bravo" {
+		t.Fatalf("Create() recovery codes = %#v", item.RecoveryCodes)
 	}
 	if !item.CreatedAt.Equal(fixed.UTC()) || !item.UpdatedAt.Equal(fixed.UTC()) {
 		t.Fatalf("Create() timestamps = %v / %v", item.CreatedAt, item.UpdatedAt)
@@ -115,6 +119,7 @@ func TestServiceCreateRejectsInvalidInputWithoutWriting(t *testing.T) {
 		{"account", CreateInput{Provider: "github", Password: "p"}, "account"},
 		{"password", CreateInput{Provider: "github", Account: "a"}, "password"},
 		{"totp secret", CreateInput{Provider: "github", Account: "a", Password: "p", TOTPSecret: "invalid!"}, "totp_secret"},
+		{"duplicate recovery code", CreateInput{Provider: "github", Account: "a", Password: "p", RecoveryCodes: []string{"same", "same"}}, "recovery_codes"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

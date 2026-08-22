@@ -15,7 +15,10 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return fmt.Errorf("read database version: %w", err)
 	}
-	migrations := []string{"001_create_credentials.sql", "002_create_platforms.sql", "003_add_totp_secret.sql"}
+	migrations := []string{
+		"001_create_credentials.sql", "002_create_platforms.sql",
+		"003_add_totp_secret.sql", "004_add_recovery_codes.sql",
+	}
 	for version < len(migrations) {
 		name := migrations[version]
 		script, err := migrationFiles.ReadFile("migrations/" + name)

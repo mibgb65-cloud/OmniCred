@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"omnicred/internal/credential"
 )
 
-const credentialColumns = "id, provider, account, username, password, totp_secret, created_at, updated_at"
+const credentialColumns = "id, provider, account, username, password, totp_secret, recovery_codes, created_at, updated_at"
 
 type Store struct {
 	db *sql.DB
@@ -21,6 +22,13 @@ func NewStore(db *sql.DB) *Store {
 }
 
 func (store *Store) Create(ctx context.Context, item credential.Credential) (credential.Credential, error) {
+	if item.RecoveryCodes == nil {
+		item.RecoveryCodes = []string{}
+	}
+	recoveryCodes, err := json.Marshal(item.RecoveryCodes)
+	if err != nil {
+		return credential.Credential{}, fmt.Errorf("encode recovery codes: %w", err)
+	}
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return credential.Credential{}, fmt.Errorf("begin credential insert: %w", err)
@@ -30,9 +38,9 @@ func (store *Store) Create(ctx context.Context, item credential.Credential) (cre
 		return credential.Credential{}, err
 	}
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO credentials (provider, account, username, password, totp_secret, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret,
+		INSERT INTO credentials (provider, account, username, password, totp_secret, recovery_codes, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret, string(recoveryCodes),
 		formatTime(item.CreatedAt), formatTime(item.UpdatedAt),
 	)
 	if err != nil {
@@ -95,6 +103,13 @@ func (store *Store) List(ctx context.Context, filter credential.Filter) ([]crede
 }
 
 func (store *Store) Update(ctx context.Context, item credential.Credential) (credential.Credential, error) {
+	if item.RecoveryCodes == nil {
+		item.RecoveryCodes = []string{}
+	}
+	recoveryCodes, err := json.Marshal(item.RecoveryCodes)
+	if err != nil {
+		return credential.Credential{}, fmt.Errorf("encode recovery codes: %w", err)
+	}
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return credential.Credential{}, fmt.Errorf("begin credential update: %w", err)
@@ -105,9 +120,9 @@ func (store *Store) Update(ctx context.Context, item credential.Credential) (cre
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE credentials
-		SET provider = ?, account = ?, username = ?, password = ?, totp_secret = ?, updated_at = ?
+		SET provider = ?, account = ?, username = ?, password = ?, totp_secret = ?, recovery_codes = ?, updated_at = ?
 		WHERE id = ?`,
-		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret, formatTime(item.UpdatedAt), item.ID,
+		item.Provider, item.Account, item.Username, item.Password, item.TOTPSecret, string(recoveryCodes), formatTime(item.UpdatedAt), item.ID,
 	)
 	if err != nil {
 		return credential.Credential{}, fmt.Errorf("update credential: %w", err)
@@ -146,10 +161,13 @@ type scanner interface {
 
 func scanCredential(row scanner) (credential.Credential, error) {
 	var item credential.Credential
-	var createdAt, updatedAt string
-	err := row.Scan(&item.ID, &item.Provider, &item.Account, &item.Username, &item.Password, &item.TOTPSecret, &createdAt, &updatedAt)
+	var recoveryCodes, createdAt, updatedAt string
+	err := row.Scan(&item.ID, &item.Provider, &item.Account, &item.Username, &item.Password, &item.TOTPSecret, &recoveryCodes, &createdAt, &updatedAt)
 	if err != nil {
 		return credential.Credential{}, err
+	}
+	if err := json.Unmarshal([]byte(recoveryCodes), &item.RecoveryCodes); err != nil {
+		return credential.Credential{}, fmt.Errorf("decode recovery codes: %w", err)
 	}
 	item.CreatedAt, err = time.Parse(time.RFC3339Nano, createdAt)
 	if err != nil {

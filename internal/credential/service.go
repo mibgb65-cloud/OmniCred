@@ -27,13 +27,14 @@ func (service *Service) Create(ctx context.Context, input CreateInput) (Credenti
 
 	now := service.now().UTC()
 	return service.store.Create(ctx, Credential{
-		Provider:   normalized.Provider,
-		Account:    normalized.Account,
-		Username:   normalized.Username,
-		Password:   normalized.Password,
-		TOTPSecret: normalized.TOTPSecret,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		Provider:      normalized.Provider,
+		Account:       normalized.Account,
+		Username:      normalized.Username,
+		Password:      normalized.Password,
+		TOTPSecret:    normalized.TOTPSecret,
+		RecoveryCodes: normalized.RecoveryCodes,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	})
 }
 
@@ -68,6 +69,7 @@ func (service *Service) Update(ctx context.Context, id int64, input UpdateInput)
 	existing.Username = normalized.Username
 	existing.Password = normalized.Password
 	existing.TOTPSecret = normalized.TOTPSecret
+	existing.RecoveryCodes = normalized.RecoveryCodes
 	existing.UpdatedAt = service.now().UTC()
 	return service.store.Update(ctx, existing)
 }
@@ -141,5 +143,33 @@ func validateInput(input CreateInput) (CreateInput, error) {
 		}
 		input.TOTPSecret = normalized
 	}
+	recoveryCodes, err := normalizeRecoveryCodes(input.RecoveryCodes)
+	if err != nil {
+		return CreateInput{}, err
+	}
+	input.RecoveryCodes = recoveryCodes
 	return input, nil
+}
+
+func normalizeRecoveryCodes(values []string) ([]string, error) {
+	if len(values) > 100 {
+		return nil, &ValidationError{Field: "recovery_codes", Message: "must contain at most 100 codes"}
+	}
+	normalized := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if utf8.RuneCountInString(value) > 256 {
+			return nil, &ValidationError{Field: "recovery_codes", Message: "contains a code that is too long"}
+		}
+		if _, exists := seen[value]; exists {
+			return nil, &ValidationError{Field: "recovery_codes", Message: "must not contain duplicate codes"}
+		}
+		seen[value] = struct{}{}
+		normalized = append(normalized, value)
+	}
+	return normalized, nil
 }

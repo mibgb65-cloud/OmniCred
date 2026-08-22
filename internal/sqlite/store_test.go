@@ -22,8 +22,9 @@ func TestStoreCRUDAndPersistence(t *testing.T) {
 
 	created, err := store.Create(ctx, credential.Credential{
 		Provider: "github", Account: "user@example.com", Username: "octocat", Password: "secret",
-		TOTPSecret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
-		CreatedAt:  createdAt, UpdatedAt: createdAt,
+		TOTPSecret:    "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+		RecoveryCodes: []string{"alpha-bravo", "charlie-delta"},
+		CreatedAt:     createdAt, UpdatedAt: createdAt,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -33,7 +34,7 @@ func TestStoreCRUDAndPersistence(t *testing.T) {
 	}
 
 	got, err := store.Get(ctx, created.ID)
-	if err != nil || got.Account != created.Account || got.TOTPSecret != created.TOTPSecret || !got.CreatedAt.Equal(createdAt) {
+	if err != nil || got.Account != created.Account || got.TOTPSecret != created.TOTPSecret || len(got.RecoveryCodes) != 2 || !got.CreatedAt.Equal(createdAt) {
 		t.Fatalf("Get() = %#v, %v", got, err)
 	}
 
@@ -55,7 +56,7 @@ func TestStoreCRUDAndPersistence(t *testing.T) {
 	defer db.Close()
 	store = NewStore(db)
 	got, err = store.Get(ctx, created.ID)
-	if err != nil || got.Password != "new-secret" || got.TOTPSecret != created.TOTPSecret {
+	if err != nil || got.Password != "new-secret" || got.TOTPSecret != created.TOTPSecret || got.RecoveryCodes[1] != "charlie-delta" {
 		t.Fatalf("Get() after reopen = %#v, %v", got, err)
 	}
 

@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, EyeOff, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -6,6 +6,7 @@ import type { Credential } from "@/api/types";
 import { ProviderMark, providerLabel } from "@/components/credentials/provider-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CredentialCardProps {
@@ -28,13 +29,14 @@ function formatUpdatedAt(value: string) {
 
 export function CredentialCard({ item, totpCode, totpPeriod, totpSecondsRemaining, onEdit, onDelete }: CredentialCardProps) {
   const [visible, setVisible] = useState(false);
-  const [copied, setCopied] = useState<"account" | "password" | "totp" | null>(null);
+  const [recoveryCodesOpen, setRecoveryCodesOpen] = useState(false);
+  const [copied, setCopied] = useState<"account" | "password" | "totp" | "recovery" | null>(null);
 
-  async function copy(value: string, field: "account" | "password" | "totp") {
+  async function copy(value: string, field: "account" | "password" | "totp" | "recovery") {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(field);
-      toast.success(field === "password" ? "密码已复制" : field === "totp" ? "2FA 验证码已复制" : "账号已复制");
+      toast.success(field === "password" ? "密码已复制" : field === "totp" ? "2FA 验证码已复制" : field === "recovery" ? "恢复码已复制" : "账号已复制");
       window.setTimeout(() => setCopied(null), 1500);
     } catch {
       toast.error("复制失败，请手动选择内容");
@@ -136,6 +138,26 @@ export function CredentialCard({ item, totpCode, totpPeriod, totpSecondsRemainin
             <span className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary transition-transform duration-200 motion-reduce:transition-none" style={{ transform: `scaleX(${totpProgress})` }} aria-hidden="true" />
           </div>
         )}
+
+        {item.recovery_codes.length > 0 && (
+          <div className="rounded-lg border border-border/75 bg-background/55 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <KeyRound className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">恢复码</p>
+                  <p className="mt-0.5 text-xs font-semibold text-foreground">已保存 {item.recovery_codes.length} 个</p>
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => setRecoveryCodesOpen(true)} aria-label="查看恢复码"><Eye className="size-4" aria-hidden="true" /></Button>
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => copy(item.recovery_codes.join("\n"), "recovery")} aria-label="复制全部恢复码">
+                  {copied === "recovery" ? <Check className="size-4 text-emerald-500" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <footer className="mt-3.5 flex items-center justify-between gap-3 border-t border-border/70 pt-3.5">
@@ -152,6 +174,26 @@ export function CredentialCard({ item, totpCode, totpPeriod, totpSecondsRemainin
           </Button>
         </div>
       </footer>
+
+      <Dialog open={recoveryCodesOpen} onOpenChange={setRecoveryCodesOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>恢复码</DialogTitle>
+            <DialogDescription>{providerLabel(item.provider)} · {item.account}。恢复码通常只能使用一次，使用后请编辑账号并从列表中移除。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 sm:grid-cols-2" aria-label="恢复码列表">
+            {item.recovery_codes.map((code) => (
+              <Button key={code} type="button" variant="outline" className="h-auto min-w-0 justify-between gap-3 px-3 py-2.5 font-mono" onClick={() => copy(code, "recovery")} aria-label={`复制恢复码 ${code}`}>
+                <span className="truncate">{code}</span><Copy className="size-3.5 shrink-0" aria-hidden="true" />
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRecoveryCodesOpen(false)}>关闭</Button>
+            <Button type="button" onClick={() => copy(item.recovery_codes.join("\n"), "recovery")}><Copy className="size-4" aria-hidden="true" />复制全部</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }
