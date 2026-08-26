@@ -298,7 +298,7 @@ describe("App", () => {
     });
   });
 
-  it("previews and imports multiple four-dash credential rows", async () => {
+  it("previews and imports account-password rows without usernames", async () => {
     const user = userEvent.setup();
     renderApp();
     await screen.findByText("user@example.com");
@@ -309,24 +309,23 @@ describe("App", () => {
     await user.click(screen.getByRole("option", { name: "GitHub" }));
     await user.click(within(dialog).getByRole("button", { name: "从文本快速解析" }));
     await user.type(within(dialog).getByLabelText("账号文本"), [
-      "邮箱----密码----用户名",
-      "avery.parker27@example.com----T7#qL2$vN9!mX4@p----AveryParker27",
-      "riley.stone83@example.com----M4@zK8#pR2$qW7!n----RileyStone83",
+      "lindsay@example.test----test-password-one-do-not-use",
+      "anthony@example.test----test-password-two-do-not-use",
     ].join("\n"));
     await user.click(within(dialog).getByRole("button", { name: "解析并填入" }));
 
     expect(within(dialog).getByText("已解析 2 条账号")).toBeInTheDocument();
-    expect(within(dialog).getByText("avery.parker27@example.com")).toBeInTheDocument();
-    expect(within(dialog).getByText("riley.stone83@example.com")).toBeInTheDocument();
+    expect(within(dialog).getByText("lindsay@example.test")).toBeInTheDocument();
+    expect(within(dialog).getByText("anthony@example.test")).toBeInTheDocument();
     expect(vi.mocked(fetch).mock.calls.some(([input, init]) => String(input).includes("/api/v1/credentials") && init?.method === "POST")).toBe(false);
 
     await user.click(within(dialog).getByRole("button", { name: "导入 2 个账号" }));
     await waitFor(() => {
       const requests = vi.mocked(fetch).mock.calls.filter(([input, init]) => String(input).endsWith("/api/v1/credentials") && init?.method === "POST");
       expect(requests).toHaveLength(2);
-      expect(requests.map((request) => JSON.parse(String(request[1]?.body)).account)).toEqual([
-        "avery.parker27@example.com",
-        "riley.stone83@example.com",
+      expect(requests.map((request) => JSON.parse(String(request[1]?.body)))).toEqual([
+        expect.objectContaining({ account: "lindsay@example.test", password: "test-password-one-do-not-use", username: "" }),
+        expect.objectContaining({ account: "anthony@example.test", password: "test-password-two-do-not-use", username: "" }),
       ]);
     });
   });

@@ -182,7 +182,7 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><FileInput className="size-4" aria-hidden="true" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold">从文本快速解析</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">支持字段标签或“邮箱----密码----用户名”多行格式</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">支持字段标签或“账号----密码[----用户名]”多行格式</span>
                 </span>
                 {parserMessage && <Badge variant="success" className="shrink-0">{parserMessage}</Badge>}
                 <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", parserOpen && "rotate-180")} aria-hidden="true" />
@@ -194,7 +194,7 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
                     id="credential-text"
                     value={rawText}
                     onChange={(event) => { setRawText(event.target.value); setParserError(""); }}
-                    placeholder={"邮箱：avery.parker27@example.com\n密码：T7#qL2$vN9!mX4@p\n用户名：AveryParker27\n\n或每行：邮箱----密码----用户名"}
+                    placeholder={"邮箱：avery.parker27@example.com\n密码：T7#qL2$vN9!mX4@p\n用户名：AveryParker27\n\n或每行：账号----密码（用户名可选）"}
                     rows={4}
                     className="resize-none"
                     aria-invalid={Boolean(parserError)}

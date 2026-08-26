@@ -53,11 +53,11 @@ export function parseCredentialEntries(text: string): ParsedCredentialText[] {
 function parseDelimitedRow(line: string): ParsedCredentialText | null {
   const first = line.indexOf("----");
   const last = line.lastIndexOf("----");
-  if (first < 0 || last <= first) return null;
+  if (first < 0) return null;
 
   const account = line.slice(0, first).trim();
-  const password = line.slice(first + 4, last).trim();
-  const username = line.slice(last + 4).trim();
+  const password = line.slice(first + 4, last > first ? last : undefined).trim();
+  const username = last > first ? line.slice(last + 4).trim() : "";
   if (labels[normalizeLabel(account)] === "account" && labels[normalizeLabel(password)] === "password") return null;
   if (!account || !password) return null;
   return { account, password, ...(username ? { username } : {}) };

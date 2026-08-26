@@ -35,4 +35,15 @@ describe("credential text parser", () => {
       { account: "riley.stone83@example.com", password: "M4@zK8#pR2$qW7!n", username: "RileyStone83" },
     ]);
   });
+
+  it("parses account and password rows without usernames", () => {
+    expect(parseCredentialEntries(`
+      邮箱----密码
+      lindsay@example.test----test-password-one-do-not-use
+      anthony@example.test----test-password-two-do-not-use
+    `)).toEqual([
+      { account: "lindsay@example.test", password: "test-password-one-do-not-use" },
+      { account: "anthony@example.test", password: "test-password-two-do-not-use" },
+    ]);
+  });
 });
