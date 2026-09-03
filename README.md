@@ -9,6 +9,7 @@ OmniCred 是一个双击即可运行的本地桌面账号密码管理器。桌�
 
 - 独立 Windows 桌面窗口，不打开浏览器。
 - 保存任意平台的登录账号、用户名和密码。
+- 按国家保存身份资料，包括中英文/本地语言姓名、姓名组成、性别、出生日期、地址、电话、邮箱和可选密码。
 - 新增、搜索、筛选、编辑和删除账号。
 - 新增、重命名和删除账号平台；重命名会同步更新关联账号。
 - 根据邮箱在本地生成 GitHub 用户名和强密码，确认后再加入账号池。
@@ -77,6 +78,11 @@ API 固定监听 `127.0.0.1`，不会监听局域网或公网地址。
 | `GET` | `/api/v1/credentials/{id}` | 读取单个账号 |
 | `PUT` | `/api/v1/credentials/{id}` | 更新账号 |
 | `DELETE` | `/api/v1/credentials/{id}` | 删除账号 |
+| `POST` | `/api/v1/identities` | 新增身份资料 |
+| `GET` | `/api/v1/identities` | 搜索或读取身份资料列表 |
+| `GET` | `/api/v1/identities/{id}` | 读取单份身份资料 |
+| `PUT` | `/api/v1/identities/{id}` | 更新身份资料 |
+| `DELETE` | `/api/v1/identities/{id}` | 删除身份资料 |
 | `GET` | `/api/v1/totp` | 读取已启用 2FA 账号的当前 TOTP 验证码 |
 | `POST` | `/api/v1/platforms` | 新增平台 |
 | `GET` | `/api/v1/platforms` | 读取平台及关联账号数量 |
@@ -108,7 +114,7 @@ curl.exe "http://127.0.0.1:8787/api/v1/credentials?provider=github"
 curl.exe "http://127.0.0.1:8787/api/v1/credentials?q=octocat"
 ```
 
-API 的读取响应包含明文密码，调用方必须把整个响应视为敏感数据。
+API 的读取响应包含账号和身份资料中的明文密码，调用方必须把整个响应视为敏感数据。
 
 ## 开发环境
 

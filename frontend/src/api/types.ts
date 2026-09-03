@@ -19,6 +19,38 @@ export interface CredentialInput {
   recovery_codes: string[];
 }
 
+export interface IdentityProfile {
+  id: number;
+  country: string;
+  full_name: string;
+  localized_name: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  gender: string;
+  birth_date: string;
+  street_address: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  phone: string;
+  email: string;
+  password: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type IdentityProfileInput = Omit<IdentityProfile, "id" | "created_at" | "updated_at">;
+
+export interface IdentityProfileFilter {
+  country?: string;
+  query?: string;
+}
+
+export interface IdentityProfileList {
+  items: IdentityProfile[];
+}
+
 export interface CredentialFilter {
   provider?: string;
   query?: string;

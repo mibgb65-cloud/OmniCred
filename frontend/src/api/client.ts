@@ -4,6 +4,10 @@ import type {
   CredentialInput,
   CredentialList,
   ErrorResponse,
+  IdentityProfile,
+  IdentityProfileFilter,
+  IdentityProfileInput,
+  IdentityProfileList,
   Platform,
   PlatformInput,
   PlatformList,
@@ -78,6 +82,32 @@ export function updateCredential(id: number, input: CredentialInput): Promise<Cr
 
 export function deleteCredential(id: number): Promise<void> {
   return request<void>(`/api/v1/credentials/${id}`, { method: "DELETE" });
+}
+
+export function listIdentityProfiles(filter: IdentityProfileFilter): Promise<IdentityProfileList> {
+  const params = new URLSearchParams();
+  if (filter.country) params.set("country", filter.country);
+  if (filter.query) params.set("q", filter.query);
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  return request<IdentityProfileList>(`/api/v1/identities${suffix}`);
+}
+
+export function createIdentityProfile(input: IdentityProfileInput): Promise<IdentityProfile> {
+  return request<IdentityProfile>("/api/v1/identities", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateIdentityProfile(id: number, input: IdentityProfileInput): Promise<IdentityProfile> {
+  return request<IdentityProfile>(`/api/v1/identities/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteIdentityProfile(id: number): Promise<void> {
+  return request<void>(`/api/v1/identities/${id}`, { method: "DELETE" });
 }
 
 export function listPlatforms(): Promise<PlatformList> {

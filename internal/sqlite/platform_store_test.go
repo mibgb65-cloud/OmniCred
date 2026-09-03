@@ -74,7 +74,7 @@ func TestPlatformMigrationSeedsDefaultsAndSetsVersion(t *testing.T) {
 		t.Fatalf("read version: %v", err)
 	}
 	items, err := NewStore(db).ListPlatforms(ctx)
-	if err != nil || version != 4 || findPlatform(items, "github") == nil || findPlatform(items, "google") == nil {
+	if err != nil || version != 5 || findPlatform(items, "github") == nil || findPlatform(items, "google") == nil {
 		t.Fatalf("migration version = %d, platforms = %#v, error = %v", version, items, err)
 	}
 }

@@ -3,6 +3,7 @@ import {
   Database,
   GitBranch,
   Globe2,
+  IdCard,
   KeyRound,
   LayoutGrid,
   Settings2,
@@ -24,13 +25,14 @@ const platformIcons: Record<string, LucideIcon> = {
 };
 
 interface CredentialSidebarProps {
-  activePage: "credentials" | "settings";
+  activePage: "credentials" | "identities" | "settings";
   provider: string;
   platforms: Platform[];
   resultCount: number;
   onProviderChange: (value: string) => void;
   onManagePlatforms: () => void;
   onOpenSettings: () => void;
+  onOpenIdentities: () => void;
 }
 
 export function CredentialSidebar(props: CredentialSidebarProps) {
@@ -83,6 +85,23 @@ export function CredentialSidebar(props: CredentialSidebarProps) {
             );
           })}
         </nav>
+
+        <button
+          type="button"
+          onClick={props.onOpenIdentities}
+          aria-current={props.activePage === "identities" ? "page" : undefined}
+          aria-label="打开身份资料"
+          className={cn(
+            "flex min-h-10 shrink-0 cursor-pointer items-center gap-2.5 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-[720px]:w-full",
+            props.activePage === "identities"
+              ? "border-primary/20 bg-primary/12 text-primary"
+              : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground min-[720px]:border-t-border",
+          )}
+        >
+          <IdCard className="size-4" aria-hidden="true" />
+          身份资料
+          {props.activePage === "identities" && <span className="ml-auto hidden size-1.5 rounded-full bg-primary min-[720px]:block" aria-hidden="true" />}
+        </button>
 
         <button
           type="button"

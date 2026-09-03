@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "@/App";
-import type { Credential } from "@/api/types";
+import type { Credential, IdentityProfile } from "@/api/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const saved: Credential = {
@@ -17,6 +17,27 @@ const saved: Credential = {
   recovery_codes: ["alpha-bravo", "charlie-delta"],
   created_at: "2026-08-21T02:00:00Z",
   updated_at: "2026-08-21T02:00:00Z",
+};
+
+const savedIdentity: IdentityProfile = {
+  id: 1,
+  country: "Philippines",
+  full_name: "Angelo Santos",
+  localized_name: "安杰洛·桑托斯",
+  first_name: "Angelo",
+  middle_name: "Reyes",
+  last_name: "Santos",
+  gender: "male",
+  birth_date: "1998-08-16",
+  street_address: "Unit 402, Sunshine Court, Aurora Blvd, Cubao",
+  city: "Quezon City",
+  region: "Metro Manila",
+  postal_code: "1109",
+  phone: "+63 (917) 482-9301",
+  email: "angelo@example.com",
+  password: "identity-password-do-not-use",
+  created_at: "2026-09-03T02:00:00Z",
+  updated_at: "2026-09-03T02:00:00Z",
 };
 
 const savedPlatform = {
@@ -76,6 +97,18 @@ describe("App", () => {
         checked_at: "2026-08-22T02:05:00Z",
         status: "ok",
       });
+      if (String(input).includes("/api/v1/identities")) {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body)) as IdentityProfile;
+          return jsonResponse({ ...savedIdentity, ...body, id: 2 }, 201);
+        }
+        if (init?.method === "PUT") {
+          const body = JSON.parse(String(init.body)) as IdentityProfile;
+          return jsonResponse({ ...savedIdentity, ...body });
+        }
+        if (init?.method === "DELETE") return new Response(null, { status: 204 });
+        return jsonResponse({ items: [savedIdentity] });
+      }
       if (String(input).includes("/api/v1/platforms")) {
         if (init?.method === "POST") {
           const body = JSON.parse(String(init.body)) as { name: string };
@@ -115,6 +148,34 @@ describe("App", () => {
     expect(within(recoveryDialog).getByText("alpha-bravo")).toBeInTheDocument();
     await user.click(within(recoveryDialog).getByRole("button", { name: "复制恢复码 alpha-bravo" }));
     expect(await navigator.clipboard.readText()).toBe("alpha-bravo");
+  });
+
+  it("views and creates identity profiles", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("user@example.com");
+
+    await user.click(screen.getByRole("button", { name: "打开身份资料" }));
+    expect(await screen.findByRole("heading", { name: "Angelo Santos" })).toBeInTheDocument();
+    expect(screen.getByText("安杰洛·桑托斯")).toBeInTheDocument();
+    expect(screen.getByText(/Quezon City/)).toBeInTheDocument();
+    expect(screen.queryByText(savedIdentity.password)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "显示身份资料密码" }));
+    expect(screen.getByText(savedIdentity.password)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "新增身份资料" }));
+    const dialog = screen.getByRole("dialog", { name: "新增身份资料" });
+    await user.type(within(dialog).getByLabelText(/国家 \/ 地区/), "Singapore");
+    await user.type(within(dialog).getByLabelText(/完整姓名/), "Tan Wei Ming");
+    await user.type(within(dialog).getByLabelText(/邮箱/), "tan@example.com");
+    await user.click(within(dialog).getByRole("button", { name: "保存身份资料" }));
+
+    await waitFor(() => {
+      const request = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith("/api/v1/identities") && init?.method === "POST");
+      expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+        country: "Singapore", full_name: "Tan Wei Ming", email: "tan@example.com", password: "",
+      });
+    });
   });
 
   it("validates and submits the create form", async () => {

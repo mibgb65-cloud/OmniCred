@@ -12,25 +12,29 @@ import (
 	"testing"
 
 	"omnicred/internal/credential"
+	"omnicred/internal/identity"
 	"omnicred/internal/platform"
 )
 
 type testStore struct {
 	items          map[int64]credential.Credential
+	identityItems  map[int64]identity.Profile
 	platformItems  map[int64]platform.Platform
 	nextID         int64
+	nextIdentityID int64
 	nextPlatformID int64
 }
 
 func newTestHandler(logOutput io.Writer) *Handler {
 	store := &testStore{
-		items: make(map[int64]credential.Credential), platformItems: make(map[int64]platform.Platform),
-		nextID: 1, nextPlatformID: 1,
+		items: make(map[int64]credential.Credential), identityItems: make(map[int64]identity.Profile),
+		platformItems: make(map[int64]platform.Platform), nextID: 1, nextIdentityID: 1, nextPlatformID: 1,
 	}
 	credentialService := credential.NewService(store)
+	identityService := identity.NewService(store)
 	platformService := platform.NewService(store)
 	logger := slog.New(slog.NewTextHandler(logOutput, nil))
-	return New(credentialService, platformService, &testSettingsService{}, logger)
+	return New(credentialService, identityService, platformService, &testSettingsService{}, logger)
 }
 
 func (store *testStore) Create(_ context.Context, item credential.Credential) (credential.Credential, error) {
@@ -80,6 +84,53 @@ func (store *testStore) Delete(_ context.Context, id int64) error {
 	return nil
 }
 
+func (store *testStore) CreateIdentity(_ context.Context, item identity.Profile) (identity.Profile, error) {
+	item.ID = store.nextIdentityID
+	store.nextIdentityID++
+	store.identityItems[item.ID] = item
+	return item, nil
+}
+
+func (store *testStore) GetIdentity(_ context.Context, id int64) (identity.Profile, error) {
+	item, ok := store.identityItems[id]
+	if !ok {
+		return identity.Profile{}, identity.ErrNotFound
+	}
+	return item, nil
+}
+
+func (store *testStore) ListIdentities(_ context.Context, filter identity.Filter) ([]identity.Profile, error) {
+	items := make([]identity.Profile, 0)
+	for id := int64(1); id < store.nextIdentityID; id++ {
+		item, ok := store.identityItems[id]
+		if !ok || filter.Country != "" && !strings.EqualFold(item.Country, filter.Country) {
+			continue
+		}
+		query := strings.ToLower(filter.Query)
+		haystack := strings.ToLower(item.Country + " " + item.FullName + " " + item.LocalizedName + " " + item.City + " " + item.Email)
+		if query == "" || strings.Contains(haystack, query) {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+
+func (store *testStore) UpdateIdentity(_ context.Context, item identity.Profile) (identity.Profile, error) {
+	if _, ok := store.identityItems[item.ID]; !ok {
+		return identity.Profile{}, identity.ErrNotFound
+	}
+	store.identityItems[item.ID] = item
+	return item, nil
+}
+
+func (store *testStore) DeleteIdentity(_ context.Context, id int64) error {
+	if _, ok := store.identityItems[id]; !ok {
+		return identity.ErrNotFound
+	}
+	delete(store.identityItems, id)
+	return nil
+}
+
 func TestCredentialAPIFlow(t *testing.T) {
 	handler := newTestHandler(io.Discard)
 
@@ -120,6 +171,34 @@ func TestCredentialAPIFlow(t *testing.T) {
 	missing := performJSON(t, handler, http.MethodGet, "/api/v1/credentials/1", "")
 	if missing.Code != http.StatusNotFound || !strings.Contains(missing.Body.String(), `"code":"not_found"`) {
 		t.Fatalf("missing response = %d, %s", missing.Code, missing.Body.String())
+	}
+}
+
+func TestIdentityAPIFlow(t *testing.T) {
+	handler := newTestHandler(io.Discard)
+	created := performJSON(t, handler, http.MethodPost, "/api/v1/identities", `{
+		"country":"Philippines","full_name":"Angelo Santos","localized_name":"安杰洛·桑托斯",
+		"first_name":"Angelo","middle_name":"Reyes","last_name":"Santos","gender":"male",
+		"birth_date":"1998-08-16","street_address":"Unit 402, Sunshine Court, Aurora Blvd, Cubao",
+		"city":"Quezon City","region":"Metro Manila","postal_code":"1109",
+		"phone":"+63 (917) 482-9301","email":"angelo@example.com","password":"secret"
+	}`)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), `"middle_name":"Reyes"`) {
+		t.Fatalf("create identity response = %d, %s", created.Code, created.Body.String())
+	}
+	listed := performJSON(t, handler, http.MethodGet, "/api/v1/identities?q=quezon", "")
+	if listed.Code != http.StatusOK || !strings.Contains(listed.Body.String(), `"full_name":"Angelo Santos"`) {
+		t.Fatalf("list identity response = %d, %s", listed.Code, listed.Body.String())
+	}
+	updated := performJSON(t, handler, http.MethodPut, "/api/v1/identities/1", `{
+		"country":"Philippines","full_name":"Angelo Santos","city":"Manila"
+	}`)
+	if updated.Code != http.StatusOK || !strings.Contains(updated.Body.String(), `"city":"Manila"`) {
+		t.Fatalf("update identity response = %d, %s", updated.Code, updated.Body.String())
+	}
+	deleted := performJSON(t, handler, http.MethodDelete, "/api/v1/identities/1", "")
+	if deleted.Code != http.StatusNoContent {
+		t.Fatalf("delete identity response = %d, %s", deleted.Code, deleted.Body.String())
 	}
 }
 

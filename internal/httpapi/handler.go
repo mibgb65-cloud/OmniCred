@@ -8,11 +8,13 @@ import (
 
 	"omnicred/internal/appsettings"
 	"omnicred/internal/credential"
+	"omnicred/internal/identity"
 	"omnicred/internal/platform"
 )
 
 type Handler struct {
 	credentials *credential.Service
+	identities  *identity.Service
 	platforms   *platform.Service
 	settings    settingsService
 	logger      *slog.Logger
@@ -25,8 +27,8 @@ type settingsService interface {
 	CheckUpdate(context.Context) (appsettings.UpdateInfo, error)
 }
 
-func New(credentials *credential.Service, platforms *platform.Service, settings settingsService, logger *slog.Logger) *Handler {
-	api := &Handler{credentials: credentials, platforms: platforms, settings: settings, logger: logger}
+func New(credentials *credential.Service, identities *identity.Service, platforms *platform.Service, settings settingsService, logger *slog.Logger) *Handler {
+	api := &Handler{credentials: credentials, identities: identities, platforms: platforms, settings: settings, logger: logger}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", api.health)
 	mux.HandleFunc("POST /api/v1/credentials", api.createCredential)
@@ -36,6 +38,13 @@ func New(credentials *credential.Service, platforms *platform.Service, settings 
 	mux.HandleFunc("PUT /api/v1/credentials/{id}", api.updateCredential)
 	mux.HandleFunc("DELETE /api/v1/credentials/{id}", api.deleteCredential)
 	mux.HandleFunc("/api/v1/credentials/{id}", api.methodNotAllowed)
+	mux.HandleFunc("POST /api/v1/identities", api.createIdentity)
+	mux.HandleFunc("GET /api/v1/identities", api.listIdentities)
+	mux.HandleFunc("/api/v1/identities", api.methodNotAllowed)
+	mux.HandleFunc("GET /api/v1/identities/{id}", api.getIdentity)
+	mux.HandleFunc("PUT /api/v1/identities/{id}", api.updateIdentity)
+	mux.HandleFunc("DELETE /api/v1/identities/{id}", api.deleteIdentity)
+	mux.HandleFunc("/api/v1/identities/{id}", api.methodNotAllowed)
 	mux.HandleFunc("GET /api/v1/totp", api.listTOTPCodes)
 	mux.HandleFunc("/api/v1/totp", api.methodNotAllowed)
 	mux.HandleFunc("POST /api/v1/platforms", api.createPlatform)
@@ -77,6 +86,15 @@ func (api *Handler) handleError(response http.ResponseWriter, request *http.Requ
 	}
 	if errors.Is(err, credential.ErrNotFound) {
 		writeError(response, http.StatusNotFound, "not_found", "credential was not found")
+		return
+	}
+	var identityValidationErr *identity.ValidationError
+	if errors.As(err, &identityValidationErr) {
+		writeError(response, http.StatusBadRequest, "invalid_request", identityValidationErr.Field+" "+identityValidationErr.Message)
+		return
+	}
+	if errors.Is(err, identity.ErrNotFound) {
+		writeError(response, http.StatusNotFound, "identity_not_found", "identity profile was not found")
 		return
 	}
 	var platformValidationErr *platform.ValidationError

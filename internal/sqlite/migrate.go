@@ -18,6 +18,7 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	migrations := []string{
 		"001_create_credentials.sql", "002_create_platforms.sql",
 		"003_add_totp_secret.sql", "004_add_recovery_codes.sql",
+		"005_create_identity_profiles.sql",
 	}
 	for version < len(migrations) {
 		name := migrations[version]

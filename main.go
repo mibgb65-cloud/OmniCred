@@ -18,6 +18,7 @@ import (
 	"omnicred/internal/credential"
 	"omnicred/internal/desktop"
 	"omnicred/internal/httpapi"
+	"omnicred/internal/identity"
 	"omnicred/internal/platform"
 	"omnicred/internal/sqlite"
 )
@@ -25,7 +26,7 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-var appVersion = "0.2.1"
+var appVersion = "0.3.0"
 
 const (
 	repositoryURL = "https://github.com/mibgb65-cloud/OmniCred"
@@ -57,10 +58,11 @@ func run(logger *slog.Logger) error {
 
 	store := sqlite.NewStore(db)
 	credentialService := credential.NewService(store)
+	identityService := identity.NewService(store)
 	platformService := platform.NewService(store)
 	uninstallerPath, uninstallAvailable := desktop.DetectUninstaller()
 	settingsService := appsettings.NewService(db, databasePath, configPath, appVersion, apiAddress, repositoryURL, uninstallAvailable)
-	api := httpapi.New(credentialService, platformService, settingsService, logger)
+	api := httpapi.New(credentialService, identityService, platformService, settingsService, logger)
 	server := apiserver.New(apiAddress, api, logger)
 	app := desktop.New(server, logger, databasePath, uninstallerPath)
 

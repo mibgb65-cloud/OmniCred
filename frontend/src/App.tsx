@@ -9,6 +9,7 @@ import { CredentialSidebar } from "@/components/credentials/credential-sidebar";
 import { CredentialToolbar } from "@/components/credentials/credential-toolbar";
 import { DeleteCredentialDialog } from "@/components/credentials/delete-credential-dialog";
 import { GithubAccountGeneratorDialog } from "@/components/credentials/github-account-generator-dialog";
+import { IdentitiesPage } from "@/components/identities/identities-page";
 import { PlatformManagerDialog } from "@/components/platforms/platform-manager-dialog";
 import { SettingsPage } from "@/components/settings/settings-page";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import { useCredentialMutations, useCredentials } from "@/hooks/use-credentials"
 import { usePlatforms } from "@/hooks/use-platforms";
 
 export default function App() {
-  const [page, setPage] = useState<"credentials" | "settings">("credentials");
+  const [page, setPage] = useState<"credentials" | "identities" | "settings">("credentials");
   const [search, setSearch] = useState("");
   const [provider, setProvider] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -37,6 +38,10 @@ export default function App() {
     setPage("credentials");
     setEditing(null);
     setFormOpen(true);
+  }
+
+  function openIdentities() {
+    setPage("identities");
   }
 
   function edit(item: Credential) {
@@ -119,7 +124,7 @@ export default function App() {
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-background">
       <WindowTitlebar />
       <a href="#main-content" className="sr-only z-50 rounded-lg bg-card px-3 py-2 text-sm font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:ring-2 focus:ring-ring">
-        跳到账号列表
+        跳到主要内容
       </a>
       <AppHeader />
       <div className="flex min-h-0 flex-1 flex-col min-[720px]:flex-row">
@@ -131,9 +136,10 @@ export default function App() {
           onProviderChange={(value) => { setProvider(value); setPage("credentials"); }}
           onManagePlatforms={() => setPlatformManagerOpen(true)}
           onOpenSettings={() => setPage("settings")}
+          onOpenIdentities={openIdentities}
         />
 
-        {page === "settings" ? <SettingsPage /> : <main id="main-content" className="flex min-h-0 min-w-0 flex-1 flex-col" tabIndex={-1}>
+        {page === "settings" ? <SettingsPage /> : page === "identities" ? <IdentitiesPage /> : <main id="main-content" className="flex min-h-0 min-w-0 flex-1 flex-col" tabIndex={-1}>
           <header className="shrink-0 border-b border-border bg-background/92 px-4 py-4 sm:px-5 lg:px-6">
             <div className="flex flex-col gap-4 min-[1100px]:flex-row min-[1100px]:items-center">
               <div className="min-w-52 shrink-0">

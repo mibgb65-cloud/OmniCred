@@ -281,6 +281,8 @@ PRAGMA user_version = 1;
 
 `004_add_recovery_codes.sql` 增加 `recovery_codes TEXT NOT NULL DEFAULT '[]'`，以 JSON 数组保存恢复码，并将 `user_version` 更新为 `4`。
 
+`005_create_identity_profiles.sql` 增加独立的 `identity_profiles` 表，保存国家、姓名组成、性别、出生日期、地址、联系方式和可选密码，并将 `user_version` 更新为 `5`。只有 `country` 和 `full_name` 必填，避免用单一国家的姓名或地址规则限制其他国家资料。
+
 时间统一保存为 UTC 的 RFC 3339 格式，API 也返回 RFC 3339 字符串。
 
 第一版不增加 `(provider, account)` 唯一约束，因为同一平台可能存在相同登录账号但用途不同的记录。是否禁止重复应在有明确产品规则后再决定。
