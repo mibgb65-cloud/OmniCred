@@ -165,6 +165,10 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "新增身份资料" }));
     const dialog = screen.getByRole("dialog", { name: "新增身份资料" });
+    await user.click(within(dialog).getByRole("combobox", { name: "从列表选择国家或地区" }));
+    await user.click(screen.getByRole("option", { name: /新加坡.*Singapore/ }));
+    expect(within(dialog).getByLabelText(/国家 \/ 地区/)).toHaveValue("Singapore");
+    await user.clear(within(dialog).getByLabelText(/国家 \/ 地区/));
     await user.type(within(dialog).getByLabelText(/国家 \/ 地区/), "Singapore");
     await user.type(within(dialog).getByLabelText(/完整姓名/), "Tan Wei Ming");
     await user.type(within(dialog).getByLabelText(/邮箱/), "tan@example.com");

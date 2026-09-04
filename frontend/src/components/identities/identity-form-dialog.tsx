@@ -1,5 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { countries } from "country-flag-icons";
+import "country-flag-icons/3x2/flags.css";
+import { Eye, EyeOff, Flag, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { z } from "zod";
@@ -61,6 +63,21 @@ const emptyValues: FormValues = {
   password: "",
 };
 
+const englishRegionNames = new Intl.DisplayNames(["en"], { type: "region" });
+const chineseRegionNames = new Intl.DisplayNames(["zh-CN"], { type: "region" });
+const unsupportedCountryCodes = new Set(["XA", "XC", "XO"]);
+const countryNameCollator = new Intl.Collator("zh-CN");
+
+const countryOptions = countries
+  .filter((code) => /^[A-Z]{2}$/.test(code) && !unsupportedCountryCodes.has(code))
+  .map((code) => ({
+    code,
+    englishName: englishRegionNames.of(code) ?? code,
+    localizedName: chineseRegionNames.of(code) ?? code,
+  }))
+  .filter((country) => country.englishName !== country.code && country.localizedName !== country.code)
+  .sort((left, right) => countryNameCollator.compare(left.localizedName, right.localizedName));
+
 interface IdentityFormDialogProps {
   open: boolean;
   profile: IdentityProfile | null;
@@ -100,6 +117,78 @@ function TextField(props: TextFieldProps) {
       {props.error
         ? <p id={`${props.id}-error`} className="text-xs font-medium text-destructive" role="alert">{props.error}</p>
         : props.helper && <p id={`${props.id}-helper`} className="text-xs leading-5 text-muted-foreground">{props.helper}</p>}
+    </div>
+  );
+}
+
+interface CountryFieldProps {
+  value: string;
+  disabled: boolean;
+  error?: string;
+  inputRef: (instance: HTMLInputElement | null) => void;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+}
+
+function CountryFlag({ code }: { code: string }) {
+  return <span className={`flag:${code} shrink-0 overflow-hidden rounded-[2px] ring-1 ring-border`} aria-hidden="true" />;
+}
+
+function CountryField(props: CountryFieldProps) {
+  const normalizedValue = props.value.trim().toLocaleLowerCase("en");
+  const selectedCountry = countryOptions.find((country) =>
+    country.code.toLocaleLowerCase("en") === normalizedValue
+    || country.englishName.toLocaleLowerCase("en") === normalizedValue
+    || country.localizedName.toLocaleLowerCase("zh-CN") === normalizedValue,
+  );
+  const descriptionID = props.error ? "identity-country-error" : "identity-country-helper";
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="identity-country">
+        国家 / 地区 <span className="text-destructive">*</span>
+      </Label>
+      <div className="flex gap-2">
+        <Select
+          value={selectedCountry?.code ?? ""}
+          onValueChange={(code) => {
+            const country = countryOptions.find((option) => option.code === code);
+            if (country) props.onChange(country.englishName);
+          }}
+          disabled={props.disabled}
+        >
+          <SelectTrigger className="w-[4.75rem] shrink-0 px-3" aria-label="从列表选择国家或地区">
+            <SelectValue placeholder={<Flag className="size-5 text-muted-foreground" aria-hidden="true" />}>
+              {selectedCountry && <CountryFlag code={selectedCountry.code} />}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="max-h-80 w-80 max-w-[calc(100vw-2rem)]">
+            {countryOptions.map((country) => (
+              <SelectItem key={country.code} value={country.code}>
+                <span className="flex items-center gap-2.5">
+                  <CountryFlag code={country.code} />
+                  <span>{country.localizedName}</span>
+                  <span className="text-muted-foreground">{country.englishName}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          ref={props.inputRef}
+          id="identity-country"
+          value={props.value}
+          onChange={(event) => props.onChange(event.target.value)}
+          onBlur={props.onBlur}
+          placeholder="例如：Philippines"
+          autoComplete="country-name"
+          aria-invalid={Boolean(props.error)}
+          aria-describedby={descriptionID}
+        />
+      </div>
+      {props.error
+        ? <p id="identity-country-error" className="text-xs font-medium text-destructive" role="alert">{props.error}</p>
+        : <p id="identity-country-helper" className="text-xs leading-5 text-muted-foreground">点击左侧国旗选择，也可以直接输入国家或地区。</p>}
     </div>
   );
 }
@@ -149,7 +238,20 @@ export function IdentityFormDialog(props: IdentityFormDialogProps) {
             <fieldset className="space-y-4" disabled={busy}>
               <legend className="text-sm font-bold text-foreground">基本信息</legend>
               <div className="grid gap-4 sm:grid-cols-2">
-                <TextField id="identity-country" label="国家 / 地区" required placeholder="例如：Philippines" autoComplete="country-name" registration={form.register("country")} error={errors.country?.message} />
+                <Controller
+                  name="country"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <CountryField
+                      value={field.value}
+                      disabled={busy}
+                      error={fieldState.error?.message}
+                      inputRef={field.ref}
+                      onBlur={field.onBlur}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
                 <TextField id="identity-full-name" label="完整姓名（Full Name）" required placeholder="例如：Angelo Santos" autoComplete="name" registration={form.register("full_name")} error={errors.full_name?.message} />
                 <TextField id="identity-localized-name" label="中文名 / 本地语言姓名" placeholder="例如：安杰洛·桑托斯" registration={form.register("localized_name")} error={errors.localized_name?.message} />
                 <TextField id="identity-first-name" label="名（First Name）" placeholder="例如：Angelo" autoComplete="given-name" registration={form.register("first_name")} error={errors.first_name?.message} />
