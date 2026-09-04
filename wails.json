@@ -13,7 +13,7 @@
   "info": {
     "companyName": "OmniCred",
     "productName": "OmniCred",
-    "productVersion": "0.3.1",
+    "productVersion": "0.3.2",
     "copyright": "Copyright 2026 OmniCred",
     "comments": "Local desktop credential manager"
   }

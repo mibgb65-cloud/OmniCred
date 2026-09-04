@@ -25,6 +25,30 @@ const optionalEmail = z.string().trim().max(320, "邮箱不能超过 320 个字�
   "请输入有效的邮箱地址",
 );
 
+function daysInMonth(year: string, month: string) {
+  const numericMonth = Number(month);
+  if (numericMonth === 2) {
+    if (!/^\d{4}$/.test(year)) return 29;
+    const numericYear = Number(year);
+    return numericYear % 400 === 0 || (numericYear % 4 === 0 && numericYear % 100 !== 0) ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(numericMonth) ? 30 : 31;
+}
+
+function isValidBirthDate(value: string) {
+  if (!value) return true;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const numericMonth = Number(month);
+  const numericDay = Number(day);
+  return Number(year) > 0
+    && numericMonth >= 1
+    && numericMonth <= 12
+    && numericDay >= 1
+    && numericDay <= daysInMonth(year, month);
+}
+
 const schema = z.object({
   country: z.string().trim().min(1, "请输入国家或地区").max(256, "国家或地区名称过长"),
   full_name: z.string().trim().min(1, "请输入完整姓名").max(256, "完整姓名过长"),
@@ -33,7 +57,7 @@ const schema = z.object({
   middle_name: z.string().trim().max(256, "中间名过长"),
   last_name: z.string().trim().max(256, "姓过长"),
   gender: z.enum(["", "male", "female", "other"]),
-  birth_date: z.string().refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "请选择有效的出生日期"),
+  birth_date: z.string().refine(isValidBirthDate, "请完整填写有效的出生日期"),
   street_address: z.string().trim().max(2048, "街道地址过长"),
   city: z.string().trim().max(256, "城市名称过长"),
   region: z.string().trim().max(256, "地区或省份名称过长"),
@@ -94,7 +118,7 @@ interface TextFieldProps {
   helper?: string;
   placeholder?: string;
   required?: boolean;
-  type?: "text" | "date" | "email" | "tel";
+  type?: "text" | "email" | "tel";
   autoComplete?: string;
 }
 
@@ -193,6 +217,92 @@ function CountryField(props: CountryFieldProps) {
   );
 }
 
+interface BirthDateFieldProps {
+  value: string;
+  error?: string;
+  inputRef: (instance: HTMLInputElement | null) => void;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+}
+
+const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
+
+function birthDateParts(value: string) {
+  const [year = "", month = "", day = ""] = value.split("-");
+  return { year, month, day };
+}
+
+function birthDateValue(year: string, month: string, day: string) {
+  return year || month || day ? `${year}-${month}-${day}` : "";
+}
+
+function BirthDateField(props: BirthDateFieldProps) {
+  const { year, month, day } = birthDateParts(props.value);
+  const maximumDay = daysInMonth(year, month);
+  const days = Array.from({ length: maximumDay }, (_, index) => String(index + 1).padStart(2, "0"));
+  const descriptionID = props.error ? "identity-birth-date-error" : "identity-birth-date-helper";
+
+  const updateYear = (nextYear: string) => {
+    const sanitizedYear = nextYear.replace(/\D/g, "").slice(0, 4);
+    const nextDay = Number(day) > daysInMonth(sanitizedYear, month) ? "" : day;
+    props.onChange(birthDateValue(sanitizedYear, month, nextDay));
+  };
+
+  const updateMonth = (nextMonth: string) => {
+    const normalizedMonth = nextMonth === "not-specified" ? "" : nextMonth;
+    const nextDay = Number(day) > daysInMonth(year, normalizedMonth) ? "" : day;
+    props.onChange(birthDateValue(year, normalizedMonth, nextDay));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label id="identity-birth-date-label">出生日期</Label>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(5rem,1fr)_5rem_5rem]" role="group" aria-labelledby="identity-birth-date-label">
+        <Input
+          ref={props.inputRef}
+          id="identity-birth-year"
+          className="col-span-2 text-center tabular-nums sm:col-span-1"
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          autoComplete="bday-year"
+          value={year}
+          placeholder="年份"
+          aria-label="出生年份"
+          aria-invalid={Boolean(props.error)}
+          aria-describedby={descriptionID}
+          onBlur={props.onBlur}
+          onChange={(event) => updateYear(event.target.value)}
+        />
+        <Select value={month || "not-specified"} onValueChange={updateMonth}>
+          <SelectTrigger id="identity-birth-month" aria-label="出生月份" aria-invalid={Boolean(props.error)} aria-describedby={descriptionID} onBlur={props.onBlur}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="not-specified">月</SelectItem>
+            {months.map((option) => <SelectItem key={option} value={option}>{Number(option)} 月</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select
+          value={day || "not-specified"}
+          onValueChange={(nextDay) => props.onChange(birthDateValue(year, month, nextDay === "not-specified" ? "" : nextDay))}
+        >
+          <SelectTrigger id="identity-birth-day" aria-label="出生日" aria-invalid={Boolean(props.error)} aria-describedby={descriptionID} onBlur={props.onBlur}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="not-specified">日</SelectItem>
+            {days.map((option) => <SelectItem key={option} value={option}>{Number(option)} 日</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      {props.error
+        ? <p id="identity-birth-date-error" className="text-xs font-medium text-destructive" role="alert">{props.error}</p>
+        : <p id="identity-birth-date-helper" className="text-xs leading-5 text-muted-foreground">按年、月、日填写，年份限 4 位数字。</p>}
+    </div>
+  );
+}
+
 export function IdentityFormDialog(props: IdentityFormDialogProps) {
   const [showPassword, setShowPassword] = useState(false);
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: emptyValues });
@@ -278,7 +388,19 @@ export function IdentityFormDialog(props: IdentityFormDialogProps) {
                     </div>
                   )}
                 />
-                <TextField id="identity-birth-date" label="出生日期" type="date" autoComplete="bday" registration={form.register("birth_date")} error={errors.birth_date?.message} />
+                <Controller
+                  name="birth_date"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <BirthDateField
+                      value={field.value}
+                      error={fieldState.error?.message}
+                      inputRef={field.ref}
+                      onBlur={field.onBlur}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
               </div>
             </fieldset>
 

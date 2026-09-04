@@ -170,6 +170,13 @@ describe("App", () => {
     expect(within(dialog).getByLabelText(/国家 \/ 地区/)).toHaveValue("Singapore");
     await user.clear(within(dialog).getByLabelText(/国家 \/ 地区/));
     await user.type(within(dialog).getByLabelText(/国家 \/ 地区/), "Singapore");
+    await user.type(within(dialog).getByRole("textbox", { name: "出生年份" }), "19977");
+    expect(within(dialog).getByRole("textbox", { name: "出生年份" })).toHaveValue("1997");
+    await user.click(within(dialog).getByRole("combobox", { name: "出生月份" }));
+    await user.click(screen.getByRole("option", { name: "2 月" }));
+    await user.click(within(dialog).getByRole("combobox", { name: "出生日" }));
+    expect(screen.queryByRole("option", { name: "29 日" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "28 日" }));
     await user.type(within(dialog).getByLabelText(/完整姓名/), "Tan Wei Ming");
     await user.type(within(dialog).getByLabelText(/邮箱/), "tan@example.com");
     await user.click(within(dialog).getByRole("button", { name: "保存身份资料" }));
@@ -177,7 +184,7 @@ describe("App", () => {
     await waitFor(() => {
       const request = vi.mocked(fetch).mock.calls.find(([input, init]) => String(input).endsWith("/api/v1/identities") && init?.method === "POST");
       expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
-        country: "Singapore", full_name: "Tan Wei Ming", email: "tan@example.com", password: "",
+        country: "Singapore", full_name: "Tan Wei Ming", birth_date: "1997-02-28", email: "tan@example.com", password: "",
       });
     });
   }, 10_000);
