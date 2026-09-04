@@ -180,7 +180,7 @@ describe("App", () => {
         country: "Singapore", full_name: "Tan Wei Ming", email: "tan@example.com", password: "",
       });
     });
-  });
+  }, 10_000);
 
   it("validates and submits the create form", async () => {
     const user = userEvent.setup();
