@@ -21,18 +21,22 @@ import (
 	"omnicred/internal/identity"
 	"omnicred/internal/platform"
 	"omnicred/internal/sqlite"
+	"omnicred/internal/updater"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
-var appVersion = "0.3.2"
+var appVersion = "0.4.0"
 
 const (
 	repositoryURL = "https://github.com/mibgb65-cloud/OmniCred"
 )
 
 func main() {
+	if desktop.RunUpdateHelper(os.Args[1:]) {
+		return
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	if err := run(logger); err != nil {
 		logger.Error("OmniCred stopped", "error", err)
@@ -61,10 +65,12 @@ func run(logger *slog.Logger) error {
 	identityService := identity.NewService(store)
 	platformService := platform.NewService(store)
 	uninstallerPath, uninstallAvailable := desktop.DetectUninstaller()
-	settingsService := appsettings.NewService(db, databasePath, configPath, appVersion, apiAddress, repositoryURL, uninstallAvailable)
+	updates := updater.New(appVersion, !developmentBuild && uninstallAvailable)
+	defer updates.Close()
+	settingsService := appsettings.NewService(db, databasePath, configPath, appVersion, apiAddress, repositoryURL, uninstallAvailable, updates)
 	api := httpapi.New(credentialService, identityService, platformService, settingsService, logger)
 	server := apiserver.New(apiAddress, api, logger)
-	app := desktop.New(server, logger, databasePath, uninstallerPath)
+	app := desktop.New(server, logger, databasePath, uninstallerPath, updates)
 
 	err = wails.Run(&options.App{
 		Title:            applicationTitle,

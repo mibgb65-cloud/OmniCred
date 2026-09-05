@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { checkUpdates, getSettingsStatus, migrateStorage } from "@/api/client";
+import type { UpdateInfo } from "@/api/types";
 
 const settingsKey = ["settings-status"] as const;
 
@@ -17,5 +18,9 @@ export function useStorageMigration() {
 }
 
 export function useUpdateCheck() {
-  return useMutation({ mutationFn: checkUpdates });
+  const client = useQueryClient();
+  const key = ["update-info"];
+  const cached = useQuery<UpdateInfo>({ queryKey: key, queryFn: checkUpdates, enabled: false });
+  const mutation = useMutation({ mutationFn: checkUpdates, onSuccess: (info) => client.setQueryData(key, info) });
+  return { ...mutation, data: cached.data };
 }

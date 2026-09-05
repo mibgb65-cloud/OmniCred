@@ -1,6 +1,9 @@
 package appsettings
 
-import "time"
+import (
+	"omnicred/internal/updater"
+	"time"
+)
 
 var (
 	ErrSameDatabasePath = newValidationError("database_path", "must be different from the current path")
@@ -30,15 +33,7 @@ type StorageResult struct {
 	RestartRequired bool   `json:"restart_required"`
 }
 
-type UpdateInfo struct {
-	CurrentVersion  string     `json:"current_version"`
-	LatestVersion   string     `json:"latest_version"`
-	UpdateAvailable bool       `json:"update_available"`
-	ReleaseURL      string     `json:"release_url"`
-	PublishedAt     *time.Time `json:"published_at,omitempty"`
-	CheckedAt       time.Time  `json:"checked_at"`
-	Status          string     `json:"status"`
-}
+type UpdateInfo = updater.Info
 
 type ValidationError struct {
 	Field   string

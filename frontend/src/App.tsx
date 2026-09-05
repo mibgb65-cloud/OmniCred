@@ -12,6 +12,7 @@ import { GithubAccountGeneratorDialog } from "@/components/credentials/github-ac
 import { IdentitiesPage } from "@/components/identities/identities-page";
 import { PlatformManagerDialog } from "@/components/platforms/platform-manager-dialog";
 import { SettingsPage } from "@/components/settings/settings-page";
+import { UpdateNotification } from "@/components/settings/update-notification";
 import { Badge } from "@/components/ui/badge";
 import { WindowTitlebar } from "@/components/window-titlebar";
 import { useCredentialMutations, useCredentials } from "@/hooks/use-credentials";
@@ -123,6 +124,7 @@ export default function App() {
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-background">
       <WindowTitlebar />
+      <UpdateNotification onOpenSettings={() => setPage("settings")} />
       <a href="#main-content" className="sr-only z-50 rounded-lg bg-card px-3 py-2 text-sm font-semibold focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:ring-2 focus:ring-ring">
         跳到主要内容
       </a>

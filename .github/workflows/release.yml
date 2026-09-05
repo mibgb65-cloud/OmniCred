@@ -47,9 +47,16 @@ jobs:
         shell: pwsh
         run: |
           go test ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go run ./tools/linecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Push-Location frontend
           npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Pop-Location
 
       - name: Build EXE and bilingual installer
@@ -57,6 +64,11 @@ jobs:
         run: |
           $version = "${{ github.ref_name }}".TrimStart("v")
           wails build -clean -nsis -o OmniCred.exe -ldflags "-X main.appVersion=$version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify silent update installer
+        shell: pwsh
+        run: ./tools/check-update-installer.ps1
 
       - name: Generate SHA-256 checksums
         shell: pwsh
@@ -67,6 +79,26 @@ jobs:
           }
           $lines | Set-Content -Encoding ascii "build/bin/SHA256SUMS.txt"
 
+      - name: Generate in-app update manifest
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem "build/bin/OmniCred-*-installer.exe" | ForEach-Object {
+            if ($_.Name -notmatch '^OmniCred-(amd64|arm64)-installer\.exe$') { throw "Unsupported installer name: $($_.Name)" }
+            @{
+              os = "windows"
+              arch = $Matches[1]
+              name = $_.Name
+              sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              size = $_.Length
+            }
+          })
+          if ($installers.Count -eq 0) { throw "No update installer found" }
+          @{
+            protocol = 1
+            version = "${{ github.ref_name }}"
+            installers = $installers
+          } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8NoBOM "build/bin/update-manifest.json"
+
       - name: Publish GitHub Release
         shell: pwsh
         env:
@@ -76,4 +108,5 @@ jobs:
           $assets = @("build/bin/OmniCred.exe")
           $assets += (Get-ChildItem "build/bin/*-installer.exe").FullName
           $assets += "build/bin/SHA256SUMS.txt"
+          $assets += "build/bin/update-manifest.json"
           gh release create $tag @assets --title "OmniCred $tag" --notes-file "docs/releases/$tag.md" --verify-tag

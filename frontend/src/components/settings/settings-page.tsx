@@ -1,6 +1,5 @@
 import {
   Activity,
-  CircleCheck,
   Clock3,
   Database,
   ExternalLink,
@@ -8,7 +7,6 @@ import {
   GitBranch,
   HardDrive,
   LoaderCircle,
-  RefreshCw,
   Server,
   ShieldAlert,
   Trash2,
@@ -16,6 +14,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { UpdateCard } from "@/components/settings/update-card";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -28,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useSettingsStatus, useStorageMigration, useUpdateCheck } from "@/hooks/use-settings";
+import { useSettingsStatus, useStorageMigration } from "@/hooks/use-settings";
 import { chooseDatabasePath, openExternal, uninstallApplication } from "@/lib/desktop-runtime";
 
 export function SettingsPage() {
@@ -36,7 +35,6 @@ export function SettingsPage() {
   const [uninstalling, setUninstalling] = useState(false);
   const status = useSettingsStatus();
   const storage = useStorageMigration();
-  const updates = useUpdateCheck();
   const info = status.data;
 
   async function selectStorage() {
@@ -47,14 +45,6 @@ export function SettingsPage() {
       toast.success(result.restart_required ? "数据库已复制，重启后使用新位置" : "数据位置已更新");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "迁移数据库失败");
-    }
-  }
-
-  async function checkVersion() {
-    try {
-      await updates.mutateAsync();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "检查更新失败");
     }
   }
 
@@ -99,20 +89,7 @@ export function SettingsPage() {
               </Button>
             </SettingsCard>
 
-            <SettingsCard icon={RefreshCw} title="版本与更新" description="从 GitHub Releases 检查稳定版本。">
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background/55 p-3.5">
-                <div><p className="text-xs text-muted-foreground">当前版本</p><p className="mt-1 font-mono text-lg font-bold">v{info.version}</p></div>
-                {updates.data?.update_available && <Badge variant="success">发现 {updates.data.latest_version}</Badge>}
-              </div>
-              {updates.data?.status === "no_releases" && <p className="text-sm text-muted-foreground">仓库尚未发布正式 Release。</p>}
-              {updates.data?.status === "ok" && !updates.data.update_available && <p className="flex items-center gap-2 text-sm text-muted-foreground"><CircleCheck className="size-4 text-primary" aria-hidden="true" />当前已是最新版本。</p>}
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={checkVersion} disabled={updates.isPending}>
-                  {updates.isPending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="size-4" aria-hidden="true" />}检查更新
-                </Button>
-                {(updates.data?.release_url || info.repository_url) && <Button type="button" variant="ghost" onClick={() => openExternal(updates.data?.release_url || `${info.repository_url}/releases`)}>查看发布页<ExternalLink className="size-4" aria-hidden="true" /></Button>}
-              </div>
-            </SettingsCard>
+            <UpdateCard info={info} />
 
             <SettingsCard icon={Activity} title="运行状态" description="所有服务仅在当前电脑上运行。">
               <dl className="grid grid-cols-2 gap-3">

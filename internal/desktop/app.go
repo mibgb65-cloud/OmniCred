@@ -12,6 +12,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"omnicred/internal/apiserver"
+	"omnicred/internal/updater"
 )
 
 type App struct {
@@ -22,12 +23,15 @@ type App struct {
 	databasePath     string
 	uninstallerPath  string
 	startUninstaller func(string) error
+	updater          *updater.Manager
+	startInstaller   func(string) error
 }
 
-func New(server *apiserver.Server, logger *slog.Logger, databasePath, uninstallerPath string) *App {
+func New(server *apiserver.Server, logger *slog.Logger, databasePath, uninstallerPath string, updates *updater.Manager) *App {
 	return &App{
 		server: server, logger: logger, databasePath: databasePath,
 		uninstallerPath: uninstallerPath, startUninstaller: startElevatedUninstaller,
+		updater: updates, startInstaller: startUpdateInstaller,
 	}
 }
 

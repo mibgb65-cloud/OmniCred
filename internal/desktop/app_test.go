@@ -33,7 +33,7 @@ func TestUninstallUsesConfiguredLauncher(t *testing.T) {
 		t.Fatalf("write test uninstaller: %v", err)
 	}
 
-	app := New(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), "", path)
+	app := New(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), "", path, nil)
 	var launchedPath string
 	app.startUninstaller = func(path string) error {
 		launchedPath = path

@@ -19,7 +19,7 @@ OmniCred 是一个双击即可运行的本地桌面账号密码管理器。桌�
 - 保留 REST API，供本地脚本和其他程序调用。
 - SQLite 单文件持久化。
 - 单实例运行；再次双击会唤醒已有窗口。
-- 设置页可查看运行状态、迁移数据库位置并检查 GitHub Releases 更新。
+- 设置页可查看运行状态、迁移数据库位置，并在 Windows 正式安装版中下载、校验和重启安装 GitHub Releases 更新。
 - 安装版可从设置页确认后启动 Windows 卸载程序；便携版会禁用此入口。
 
 ## 直接运行
@@ -177,6 +177,8 @@ https://github.com/mibgb65-cloud/OmniCred
 ```
 
 Windows 安装器会分别让用户选择程序安装目录和数据存储目录；首次启动时，数据目录选择会写入现有应用配置，重装不会覆盖已有设置。
+
+Windows 正式安装版可在“设置 → 版本与更新”中下载并校验新安装包，准备完成后点击“重启并更新”完成静默升级。Windows 可能请求一次管理员授权；取消授权时应用不会退出。旧版客户端需先手动安装一次包含此功能的版本。支持范围、发布清单和验证步骤见 [应用内更新说明](./docs/updating.md)。
 
 每次发布前，先创建与标签同名的说明文件，例如 [`docs/releases/v0.1.0.md`](./docs/releases/v0.1.0.md)。推送符合 `vMAJOR.MINOR.PATCH` 的标签（例如 `v0.2.0`）后，[`.github/workflows/release.yml`](./.github/workflows/release.yml) 会读取对应说明作为 Release Notes，并在 Windows runner 上运行测试、构建 EXE 和双语安装器、生成 SHA-256 校验文件以及创建 GitHub Release。缺少对应说明文件时发布会失败。不要把本地数据库或真实密码提交到仓库。
 

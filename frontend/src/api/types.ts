@@ -106,10 +106,20 @@ export interface UpdateInfo {
   current_version: string;
   latest_version: string;
   update_available: boolean;
+  download_available: boolean;
+  unavailable_reason?: string;
   release_url: string;
   published_at?: string;
   checked_at: string;
   status: "ok" | "no_releases";
+}
+
+export interface UpdateState {
+  phase: "idle" | "downloading" | "verifying" | "ready" | "installing" | "error";
+  version?: string;
+  downloaded: number;
+  total: number;
+  error?: string;
 }
 
 export interface ErrorResponse {
