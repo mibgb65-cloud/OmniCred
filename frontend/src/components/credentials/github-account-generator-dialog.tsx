@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { generateGithubPassword, generateGithubUsername } from "@/lib/github-account-generator";
+import { generateGithubUsername } from "@/lib/github-account-generator";
+import { generateStrongPassword } from "@/lib/password-generator";
 
 const emailSchema = z.string().trim().min(1, "请输入邮箱").email("请输入有效邮箱").max(254, "邮箱地址过长");
 const usernamePattern = /^(?!.*--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
@@ -48,7 +49,7 @@ export function GithubAccountGeneratorDialog(props: GithubAccountGeneratorDialog
     }
     setEmail(parsed.data);
     setUsername(generateGithubUsername());
-    setPassword(generateGithubPassword());
+    setPassword(generateStrongPassword());
     setGenerated(true);
     setShowPassword(false);
     setErrors({});
@@ -76,7 +77,7 @@ export function GithubAccountGeneratorDialog(props: GithubAccountGeneratorDialog
 
   function regenerateAll() {
     regenerateUsername();
-    setPassword(generateGithubPassword());
+    setPassword(generateStrongPassword());
     setShowPassword(false);
   }
 

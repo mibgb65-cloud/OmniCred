@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, Eye, EyeOff, FileInput, KeyRound, ListChecks, LoaderCircle, ScanText, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, FileInput, KeyRound, ListChecks, LoaderCircle, ScanText, Trash2, WandSparkles } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import type { Credential, CredentialInput, Platform } from "@/api/types";
@@ -21,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { parseCredentialEntries, type ParsedCredentialText } from "@/lib/credential-text-parser";
+import { generateStrongPassword } from "@/lib/password-generator";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -157,6 +159,20 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
     setBatchRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
   }
 
+  function generatePassword() {
+    try {
+      form.setValue("password", generateStrongPassword(), {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setShowPassword(true);
+      toast.success("已生成 18 位强密码");
+    } catch {
+      toast.error("当前环境无法生成安全随机密码");
+    }
+  }
+
   return (
     <Dialog open={props.open} onOpenChange={(open) => !busy && props.onOpenChange(open)}>
       <DialogContent className="grid max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:p-0">
@@ -281,13 +297,22 @@ export function CredentialFormDialog(props: CredentialFormDialogProps) {
             control={form.control}
             render={({ field, fieldState }) => (
               <div className="space-y-2">
-                <Label htmlFor="password">密码 <span className="text-destructive">*</span></Label>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="password">密码 <span className="text-destructive">*</span></Label>
+                  {!editing && (
+                    <Button type="button" variant="ghost" size="sm" onClick={generatePassword} disabled={busy} className="-my-1 h-8 px-2.5 text-primary hover:text-primary">
+                      <WandSparkles className="size-3.5" aria-hidden="true" />
+                      生成强密码
+                    </Button>
+                  )}
+                </div>
                 <div className="relative">
-                  <Input {...field} id="password" type={showPassword ? "text" : "password"} placeholder="输入密码" autoComplete="new-password" className="pr-12" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? "password-error" : undefined} />
+                  <Input {...field} id="password" type={showPassword ? "text" : "password"} placeholder="输入密码" autoComplete="new-password" className="pr-12" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? "password-error" : !editing ? "password-helper" : undefined} />
                   <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={showPassword ? "隐藏密码" : "显示密码"} aria-pressed={showPassword}>
                     {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
                   </button>
                 </div>
+                {!fieldState.error && !editing && <p id="password-helper" className="text-xs leading-5 text-muted-foreground">生成的密码为 18 位，包含大小写字母、数字和特殊字符。</p>}
                 <FieldError id="password-error" message={fieldState.error?.message} />
               </div>
             )}

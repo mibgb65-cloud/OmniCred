@@ -27,7 +27,7 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-var appVersion = "0.4.0"
+var appVersion = "0.4.1"
 
 const (
 	repositoryURL = "https://github.com/mibgb65-cloud/OmniCred"

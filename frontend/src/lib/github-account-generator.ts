@@ -1,7 +1,5 @@
 const lowercase = "abcdefghijkmnopqrstuvwxyz";
-const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const digits = "23456789";
-const symbols = "!@#$%^&*_=+?-";
 
 const firstNames = [
   "Liam", "Noah", "Ethan", "Mason", "Lucas", "Owen", "Caleb", "Julian",
@@ -21,23 +19,6 @@ export function generateGithubUsername() {
   const firstName = firstNames[randomIndex(firstNames.length)];
   const lastName = lastNames[randomIndex(lastNames.length)];
   return firstName + lastName + randomCharacter(lowercase) + randomCharacter(digits);
-}
-
-export function generateGithubPassword() {
-  const characters = lowercase + uppercase + digits + symbols;
-  const password = [
-    randomCharacter(lowercase),
-    randomCharacter(uppercase),
-    randomCharacter(digits),
-    randomCharacter(symbols),
-  ];
-  while (password.length < 18) password.push(randomCharacter(characters));
-
-  for (let index = password.length - 1; index > 0; index--) {
-    const target = randomIndex(index + 1);
-    [password[index], password[target]] = [password[target], password[index]];
-  }
-  return password.join("");
 }
 
 function randomCharacter(characters: string) {

@@ -197,6 +197,24 @@ describe("App", () => {
     expect(platform).toHaveTextContent("notion");
   });
 
+  it("generates a strong password in the create form", async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await screen.findByText("user@example.com");
+
+    await user.click(screen.getByRole("button", { name: "新增账号" }));
+    const dialog = screen.getByRole("dialog", { name: "新增账号" });
+    await user.click(within(dialog).getByRole("button", { name: "生成强密码" }));
+
+    const passwordInput = within(dialog).getByLabelText(/^密码/) as HTMLInputElement;
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(passwordInput.value).toHaveLength(18);
+    expect(passwordInput.value).toMatch(/[a-z]/);
+    expect(passwordInput.value).toMatch(/[A-Z]/);
+    expect(passwordInput.value).toMatch(/[0-9]/);
+    expect(passwordInput.value).toMatch(/[!@#$%^&*_=+?-]/);
+  });
+
   it("supports desktop keyboard shortcuts", async () => {
     const user = userEvent.setup();
     renderApp();
